@@ -9,7 +9,7 @@ export const Activity = () => {
         gap: 1,
         paddingX: 2,
         marginBottom: 3,
-        alignSelf: "start",
+        alignSelf: { sx: "start", lg: "center" },
       }}
     >
       <Typography level="h3" textAlign={"center"}>

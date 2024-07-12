@@ -23,6 +23,7 @@ export const BuilderCard = ({
         borderBottom: "1px solid black",
         padding: { xs: 1, lg: 3 },
         paddingBottom: { xs: 3, lg: 5 },
+        borderRadius: { xs: 0, lg: "8px" },
       }}
     >
       <img src={image} alt={`${name}-image`} width={300} height={300} />
