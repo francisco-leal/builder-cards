@@ -23,6 +23,7 @@ export type TalentPassport = {
 
 type TalentPassportResponse = {
   passports: TalentPassport[];
+  pagination: { current_page: number; last_page: number; total: number };
 };
 
 export const searchPassports = async (
@@ -30,7 +31,7 @@ export const searchPassports = async (
   currentPage: number
 ): Promise<TalentPassportResponse> => {
   return unstable_cache(
-    async (query: string) => {
+    async (query: string, currentPage: number) => {
       try {
         const request = await fetch(
           `${TALENT_PASSPORT_URL}/passports?keyword=${query}&page=${currentPage}`,
@@ -47,9 +48,9 @@ export const searchPassports = async (
         return [];
       }
     },
-    [`search_${query}`],
+    [`search_${query}_${currentPage}`],
     { revalidate: CACHE_24_HOURS }
-  )(query);
+  )(query, currentPage);
 };
 
 export const getPassportById = async (

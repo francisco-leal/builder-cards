@@ -1,5 +1,6 @@
-import { Box, Typography } from "@mui/joy";
+import { Box, Typography, Button } from "@mui/joy";
 import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
+import Link from "next/link";
 
 export function Header() {
   return (
@@ -14,9 +15,14 @@ export function Header() {
         width: "100%",
       }}
     >
-      <Typography level="h3" sx={{ marginLeft: "32px" }}>
-        Builder Cards
-      </Typography>
+      <Button
+        component={Link}
+        href="/"
+        variant="plain"
+        sx={{ marginLeft: "32px" }}
+      >
+        <Typography level="h3">Builder Cards</Typography>
+      </Button>
       <Box sx={{ marginRight: "32px" }}>
         <DynamicWidget />
       </Box>
