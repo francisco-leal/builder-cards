@@ -1,4 +1,5 @@
 import { Box, Typography } from "@mui/joy";
+import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
 
 export default function Home() {
   return (
@@ -12,12 +13,12 @@ export default function Home() {
         minHeight: "100vh",
         padding: 3,
         backgroundColor: "background.default",
+        gap: 2,
       }}
     >
-      <Typography level="h1" sx={{ marginBottom: 2 }}>
-        Builder Cards
-      </Typography>
+      <Typography level="h1">Builder Cards</Typography>
       <Typography level="body-lg">Collect your favorite builders</Typography>
+      <DynamicWidget />
     </Box>
   );
 }
