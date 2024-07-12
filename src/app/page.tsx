@@ -1,23 +1,27 @@
-import { Box, Typography } from "@mui/joy";
+import { Suspense } from "react";
+import { Typography } from "@mui/joy";
+import { SearchBar, BuildersTable, BuildersTableSkeleton } from "@/components";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: {
+    query?: string;
+    page?: string;
+  };
+}) {
+  const query = searchParams?.query || "";
+  const currentPage = Number(searchParams?.page) || 1;
+
   return (
-    <Box
-      component="main"
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        padding: 3,
-        backgroundColor: "background.default",
-      }}
-    >
-      <Typography level="h1" sx={{ marginBottom: 2 }}>
-        Builder Cards
+    <>
+      <Typography fontWeight={"bold"} level="body-lg">
+        Collect your favorite builders
       </Typography>
-      <Typography level="body-lg">Collect your favorite builders</Typography>
-    </Box>
+      <SearchBar placeholder="Search for builders..." />
+      <Suspense key={query + currentPage} fallback={<BuildersTableSkeleton />}>
+        <BuildersTable query={query} currentPage={currentPage} />
+      </Suspense>
+    </>
   );
 }

@@ -1,0 +1,57 @@
+"use server";
+import { unstable_cache } from "next/cache";
+import { CACHE_24_HOURS } from "@/constants";
+
+const TALENT_PROTOCOL_KEY = process.env.TALENT_PROTOCOL_KEY || "";
+const TALENT_PASSPORT_URL = process.env.TALENT_PASSPORT_API_URL || "";
+
+export type TalentPassport = {
+  score: number;
+  connections_score: number;
+  credentials_score: number;
+  credibility_score: number;
+  main_wallet: `0x${string}`;
+  passport_id: number;
+  verified: boolean;
+  passport_profile: {
+    display_name: string;
+    image_url: string;
+    bio: string;
+    name: string;
+  };
+};
+
+type TalentPassportResponse = {
+  passports: TalentPassport[];
+};
+
+const fetchSearchPassports = async (query: string, currentPage: number) => {
+  return unstable_cache(
+    async (query: string) => {
+      try {
+        const request = await fetch(
+          `${TALENT_PASSPORT_URL}/passports?keyword=${query}&page=${currentPage}`,
+          {
+            method: "GET",
+            headers: {
+              "X-API-KEY": TALENT_PROTOCOL_KEY,
+            },
+          }
+        );
+        return await request.json();
+      } catch (e) {
+        console.log(e);
+        return [];
+      }
+    },
+    [`search_${query}`],
+    { revalidate: CACHE_24_HOURS }
+  )(query);
+};
+
+export const searchPassports = async (
+  query: string,
+  currentPage: number
+): Promise<TalentPassportResponse> => {
+  return fetchSearchPassports(query, currentPage);
+};
