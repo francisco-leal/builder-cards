@@ -1,7 +1,23 @@
+import { Suspense } from "react";
 import { Box, Typography } from "@mui/joy";
-import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
+import {
+  Header,
+  SearchBar,
+  BuildersTable,
+  BuildersTableSkeleton,
+} from "@/components";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: {
+    query?: string;
+    page?: string;
+  };
+}) {
+  const query = searchParams?.query || "";
+  const currentPage = Number(searchParams?.page) || 1;
+
   return (
     <Box
       component="main"
@@ -9,16 +25,20 @@ export default function Home() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
         minHeight: "100vh",
-        padding: 3,
+        minWidth: "100vw",
         backgroundColor: "background.default",
         gap: 2,
       }}
     >
-      <Typography level="h1">Builder Cards</Typography>
-      <Typography level="body-lg">Collect your favorite builders</Typography>
-      <DynamicWidget />
+      <Header />
+      <Typography fontWeight={"bold"} level="body-lg">
+        Collect your favorite builders
+      </Typography>
+      <SearchBar placeholder="Search for builders..." />
+      <Suspense key={query + currentPage} fallback={<BuildersTableSkeleton />}>
+        <BuildersTable query={query} currentPage={currentPage} />
+      </Suspense>
     </Box>
   );
 }
