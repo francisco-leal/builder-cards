@@ -25,7 +25,10 @@ type TalentPassportResponse = {
   passports: TalentPassport[];
 };
 
-const fetchSearchPassports = async (query: string, currentPage: number) => {
+export const searchPassports = async (
+  query: string,
+  currentPage: number
+): Promise<TalentPassportResponse> => {
   return unstable_cache(
     async (query: string) => {
       try {
@@ -49,9 +52,25 @@ const fetchSearchPassports = async (query: string, currentPage: number) => {
   )(query);
 };
 
-export const searchPassports = async (
-  query: string,
-  currentPage: number
-): Promise<TalentPassportResponse> => {
-  return fetchSearchPassports(query, currentPage);
+export const getPassportById = async (
+  id: string
+): Promise<{ passport: TalentPassport }> => {
+  return unstable_cache(
+    async (id: string) => {
+      try {
+        const request = await fetch(`${TALENT_PASSPORT_URL}/passports/${id}`, {
+          method: "GET",
+          headers: {
+            "X-API-KEY": TALENT_PROTOCOL_KEY,
+          },
+        });
+        return await request.json();
+      } catch (e) {
+        console.log(e);
+        return [];
+      }
+    },
+    [`user_${id}`],
+    { revalidate: CACHE_24_HOURS }
+  )(id);
 };
