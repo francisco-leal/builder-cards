@@ -1,6 +1,6 @@
 import { getPassportById } from "@/external/talent_passport";
-import { Box, Button, Chip, Divider, Typography } from "@mui/joy";
-import { BuilderCard, BuilderDetails } from "@/components";
+import { Box } from "@mui/joy";
+import { Activity, BuilderCard, BuilderDetails } from "@/components";
 
 export default async function BuilderPage({
   params,
@@ -28,6 +28,7 @@ export default async function BuilderPage({
           bio={passport.passport_profile.bio}
         />
       </Box>
+      <Activity />
     </>
   );
 }
