@@ -1,4 +1,3 @@
-"use client";
 import { Box, Typography } from "@mui/joy";
 import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
 
@@ -11,7 +10,7 @@ export function Header() {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginTop: "16px",
+        marginY: "16px",
         width: "100%",
       }}
     >
