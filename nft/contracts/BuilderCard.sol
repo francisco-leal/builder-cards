@@ -5,29 +5,80 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract BuilderCard is ERC1155 {
+    address _platformAddress;
     mapping(uint256 _id => uint256 _balanceOfId) _balancesOfIds;
+
+    mapping(address _builder => uint256 _id) _builderIds;
+
     uint256 _nftBalance;
 
-    constructor(string memory uri_) ERC1155(uri_) {}
+    uint256 _idSequence;
+
+    uint256 constant TOTAL_COLLECT_FEE = 0.001 ether;
+    uint256 constant BUILDER_REWARD = 0.0005 ether;
+    uint256 constant FIRST_COLLECTOR_REWARD = 0.0003 ether;
+    uint256 constant PLATFORM_FEE = 0.0002 ether;
+
+    constructor(string memory uri_, address _pa) ERC1155(uri_) {
+        _platformAddress = _pa;
+    }
 
     function uri(uint256 _id) public view override returns (string memory) {
         return
             string.concat(super.uri(_id), "/", Strings.toString(_id), ".json");
     }
 
-    function collect(uint256 _id) public {
+    function collect(address _builder) public payable {
+        require(
+            msg.value >= TOTAL_COLLECT_FEE,
+            "not enough value send in the transaction"
+        );
+
+        uint256 _id = _builderIds[_builder];
+        bool firstMint = false;
+
+        if (_id == 0) {
+            firstMint = true;
+            _idSequence += 1;
+            _id = _idSequence;
+            _builderIds[_builder] = _id;
+        }
+
         _mint(msg.sender, _id, 1, "");
+
         _balancesOfIds[_id] += 1;
+
         _nftBalance += 1;
+
+        if (firstMint) {
+            payable(msg.sender).transfer(FIRST_COLLECTOR_REWARD);
+        }
+
+        payable(_builder).transfer(BUILDER_REWARD);
+
+        payable(_platformAddress).transfer(
+            TOTAL_COLLECT_FEE - FIRST_COLLECTOR_REWARD - BUILDER_REWARD
+        );
     }
 
-    function balanceOfToken(
-        uint256 _id
+    function balanceOfBuilder(
+        address _builder
     ) public view returns (uint256 _balance) {
+        uint256 _id = _builderIds[_builder];
+
         _balance = _balancesOfIds[_id];
     }
 
     function balance() public view returns (uint256 _nftBln) {
         _nftBln = _nftBalance;
+    }
+
+    function balanceOfCollector(
+        address _collector,
+        address _builder
+    ) public view returns (uint256) {
+        uint256 _id = _builderIds[_builder];
+
+        return super.balanceOf(_collector, _id);
     }
 }
