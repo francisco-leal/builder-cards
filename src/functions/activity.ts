@@ -20,6 +20,7 @@ export const getBuilderActivities = async (id: `0x${string}`) => {
           .from("collects")
           .select("*")
           .eq("token_id", tokenId)
+          .order("created_at", { ascending: false })
           .throwOnError();
 
         if (error) {
