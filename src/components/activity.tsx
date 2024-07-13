@@ -59,7 +59,7 @@ export const Activity = ({ activities }: { activities: Collects[] }) => {
                 {shortenAddress(i.collector)}
               </Skeleton>
             </Typography>
-            <Link href={`${BLOCKSCOUT_URL}tx/${i.hash}`} target="_blank">
+            <Link href={`${BLOCKSCOUT_URL}tx/${i.hash}`}>
               <Typography
                 sx={{
                   display: "flex",
