@@ -10,9 +10,12 @@ import {
 import { baseSepolia } from "viem/chains";
 import BuilderCardABI from "@/lib/abi/BuilderCard.json";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const BUILDER_CARD_CONTRACT = (process.env.NEXT_PUBLIC_BUILDER_CARD_CONTRACT ||
   "0x0") as `0x${string}`;
+
+const BLOCKSCOUT_URL = "https://base-sepolia.blockscout.com/";
 
 export const BuilderDetails = ({
   displayName,
@@ -33,9 +36,25 @@ export const BuilderDetails = ({
 
   useEffect(() => {
     if (isSuccess || isError) {
+      if (isSuccess) {
+        toast.success(`Transaction successful: ${hash}`, {
+          action: {
+            label: "View",
+            onClick: () => window.open(`${BLOCKSCOUT_URL}tx/${hash}`),
+          },
+        });
+      } else {
+        toast.error("Transaction failed");
+      }
       setIsCollecting(false);
     }
   }, [isSuccess, isError]);
+
+  useEffect(() => {
+    if (hash) {
+      toast.info("Transaction submitted, please wait..");
+    }
+  }, [hash]);
 
   const handleCollect = async () => {
     if (chainId !== baseSepolia.id) {
@@ -84,7 +103,12 @@ export const BuilderDetails = ({
             ratio="1/1"
             sx={{ width: 40, height: 40, borderRadius: "10px" }}
           >
-            <img src={image} width={40} height={40} />
+            <img
+              src={image}
+              alt={`${displayName}-image-details`}
+              width={40}
+              height={40}
+            />
           </AspectRatio>
           <Typography level="body-md" sx={{ marginLeft: 2 }}>
             {displayName}

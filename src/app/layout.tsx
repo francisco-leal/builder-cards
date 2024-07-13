@@ -6,6 +6,7 @@ import { Box } from "@mui/joy";
 import { Header } from "@/components";
 import { CssVarsProvider } from "@mui/joy/styles";
 import { theme } from "@/theme";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,6 +46,7 @@ export default function RootLayout({
             >
               <Header />
               {children}
+              <Toaster />
             </Box>
           </Box>
         </CssVarsProvider>
