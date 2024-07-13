@@ -167,55 +167,57 @@ export const BuilderDetails = ({
           </Button>
         </Box>
       </Box>
-      <Box sx={{ display: "flex", flexDirection: "column", border: "0px" }}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            paddingY: "12px",
-            paddingX: "16px",
-            backgroundColor: "black",
-            borderTopRightRadius: "16px",
-            borderTopLeftRadius: "16px",
-            background: "black",
-          }}
-        >
-          <Typography level="body-md" textColor="common.white">
-            Top Collectors
-          </Typography>
-        </Box>
-        {collectors.map((collector, index) => (
+      {collectors.length > 0 && (
+        <Box sx={{ display: "flex", flexDirection: "column", border: "0px" }}>
           <Box
-            key={`${collector.id}-collector`}
             sx={{
               display: "flex",
               flexDirection: "row",
               paddingY: "12px",
               paddingX: "16px",
-              borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
-              alignItems: "center",
-              background: "white",
-              borderBottomLeftRadius:
-                index === collectors.length - 1 ? "16px" : "0px",
-              borderBottomRightRadius:
-                index === collectors.length - 1 ? "16px" : "0px",
+              backgroundColor: "black",
+              borderTopRightRadius: "16px",
+              borderTopLeftRadius: "16px",
+              background: "black",
             }}
           >
-            <Avatar src={image} sx={{ width: "38", height: "38" }} />
-            <Typography level="body-md" sx={{ marginLeft: 2 }}>
-              {shortenAddress(collector.collector)}
+            <Typography level="body-md" textColor="common.white">
+              Top Collectors
             </Typography>
-            <Chip
-              variant="solid"
-              color="neutral"
-              size="sm"
-              sx={{ marginLeft: "auto", paddingY: "4px" }}
-            >
-              x{collector.balance}
-            </Chip>
           </Box>
-        ))}
-      </Box>
+          {collectors.map((collector, index) => (
+            <Box
+              key={`${collector.id}-collector`}
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                paddingY: "12px",
+                paddingX: "16px",
+                borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
+                alignItems: "center",
+                background: "white",
+                borderBottomLeftRadius:
+                  index === collectors.length - 1 ? "16px" : "0px",
+                borderBottomRightRadius:
+                  index === collectors.length - 1 ? "16px" : "0px",
+              }}
+            >
+              <Avatar src={image} sx={{ width: "38", height: "38" }} />
+              <Typography level="body-md" sx={{ marginLeft: 2 }}>
+                {shortenAddress(collector.collector)}
+              </Typography>
+              <Chip
+                variant="solid"
+                color="neutral"
+                size="sm"
+                sx={{ marginLeft: "auto", paddingY: "4px" }}
+              >
+                x{collector.balance}
+              </Chip>
+            </Box>
+          ))}
+        </Box>
+      )}
       <Box
         sx={{
           display: "flex",
