@@ -1,6 +1,18 @@
 import { Box, Avatar, Skeleton, Typography, Link } from "@mui/joy";
+import { Collects } from "@/functions/activity";
+import { BLOCKSCOUT_URL } from "@/constants";
+import { DateTime } from "luxon";
+import { OpenInNew } from "@mui/icons-material";
 
-export const Activity = () => {
+export const Activity = ({ activities }: { activities: Collects[] }) => {
+  const dateToDifferenceFromNow = (date: string) => {
+    return DateTime.fromISO(date).toRelative();
+  };
+
+  const shortenAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
   return (
     <Box
       sx={{
@@ -8,16 +20,22 @@ export const Activity = () => {
         flexDirection: "column",
         gap: 1,
         paddingX: 2,
-        alignSelf: { sx: "start", lg: "center" },
+        alignSelf: { xs: "start", lg: "center" },
         marginBottom: "100px",
+        width: "calc(100% - 32px)",
       }}
     >
       <Typography level="h3" textAlign={"center"}>
         Activity
       </Typography>
-      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+      {activities.length === 0 && (
+        <Typography textAlign={"center"}>
+          Be the first to collect this builder!
+        </Typography>
+      )}
+      {activities.map((i) => (
         <Box
-          key={`${i}-activity`}
+          key={`${i.id}-activity`}
           sx={{
             display: "flex",
             flexDirection: "row",
@@ -38,15 +56,24 @@ export const Activity = () => {
           </Avatar>
           <Box sx={{ display: "flex", flexDirection: "column" }}>
             <Typography>
-              <Skeleton loading={true}>
-                leal.eth but its a really long text because why
+              <Skeleton loading={!i.collector}>
+                {shortenAddress(i.collector)}
               </Skeleton>
             </Typography>
-            <Typography>
-              <Skeleton loading={true}>
-                leal.eth but its a really long text because why
-              </Skeleton>
-            </Typography>
+            <Link href={`${BLOCKSCOUT_URL}tx/${i.hash}`} target="_blank">
+              <Typography
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Skeleton loading={!i.hash}>
+                  {dateToDifferenceFromNow(i.created_at)} <OpenInNew />
+                </Skeleton>
+              </Typography>
+            </Link>
           </Box>
         </Box>
       ))}

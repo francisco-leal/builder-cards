@@ -12,11 +12,7 @@ import { baseSepolia } from "viem/chains";
 import BuilderCardABI from "@/lib/abi/BuilderCard.json";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-
-const BUILDER_CARD_CONTRACT = (process.env.NEXT_PUBLIC_BUILDER_CARD_CONTRACT ||
-  "0x0") as `0x${string}`;
-
-const BLOCKSCOUT_URL = "https://base-sepolia.blockscout.com/";
+import { BUILDER_CARD_CONTRACT, BLOCKSCOUT_URL } from "@/constants";
 
 export const BuilderDetails = ({
   displayName,
@@ -261,7 +257,7 @@ export const BuilderDetails = ({
           position: "fixed",
           bottom: 0,
           left: 0,
-          width: "calc(100% - 32px)",
+          width: "calc(100% - 48px)",
           backgroundColor: "#F0EFF7",
           padding: "16px",
           zIndex: 10,

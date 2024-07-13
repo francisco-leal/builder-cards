@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { createPublicClient, http, parseAbiItem } from "viem";
 import { baseSepolia } from "viem/chains";
 import { supabase } from "@/db";
+import { revalidateTag } from "next/cache";
 
 type RequestBody = {
   hash: `0x${string}`;
@@ -58,6 +59,8 @@ export async function POST(request: NextRequest) {
         onConflict: "hash",
       }
     );
+
+    revalidateTag(`activities_${id}`);
 
     // create supabase rpc call to update the number of holders && totalSupply of the card or use onchain data?
   }

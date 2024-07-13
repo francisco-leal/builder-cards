@@ -1,6 +1,7 @@
 import { getPassportById } from "@/external/talent_passport";
 import { Box } from "@mui/joy";
 import { Activity, BuilderCard, BuilderDetails } from "@/components";
+import { getBuilderActivities } from "@/functions/activity";
 
 export default async function BuilderPage({
   params,
@@ -8,6 +9,8 @@ export default async function BuilderPage({
   params: { id: string };
 }) {
   const { passport } = await getPassportById(params.id);
+  const { activities } = await getBuilderActivities(params.id);
+
   return (
     <>
       <Box
@@ -29,7 +32,7 @@ export default async function BuilderPage({
           tokenId={passport.passport_id}
         />
       </Box>
-      <Activity />
+      <Activity activities={activities} />
     </>
   );
 }
