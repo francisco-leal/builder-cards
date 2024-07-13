@@ -27,6 +27,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.envrc
 
 # vercel
 .vercel
@@ -44,3 +45,4 @@ typechain-types
 coverage
 coverage.json
 ignition/deployments/chain-31337
+ignition/deployments
