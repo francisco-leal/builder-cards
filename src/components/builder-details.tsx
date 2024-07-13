@@ -1,23 +1,57 @@
-import {
-  Box,
-  Button,
-  Chip,
-  Divider,
-  Typography,
-  AspectRatio,
-  Avatar,
-} from "@mui/joy";
+"use client";
+import { Box, Button, Chip, Typography, AspectRatio, Avatar } from "@mui/joy";
 import { Share, ShowChart, MoreVert, LocalActivity } from "@mui/icons-material";
+import {
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useSwitchChain,
+  useChainId,
+} from "wagmi";
+import { baseSepolia } from "viem/chains";
+import BuilderCardABI from "@/lib/abi/BuilderCard.json";
+import { useState, useEffect } from "react";
+
+const BUILDER_CARD_CONTRACT = (process.env.NEXT_PUBLIC_BUILDER_CARD_CONTRACT ||
+  "0x0") as `0x${string}`;
 
 export const BuilderDetails = ({
   displayName,
-  bio,
   image,
+  tokenId,
 }: {
   displayName: string;
-  bio: string;
   image: string;
+  tokenId: number;
 }) => {
+  const { data: hash, writeContract } = useWriteContract();
+  const { isSuccess, isError } = useWaitForTransactionReceipt({
+    hash,
+  });
+  const [isCollecting, setIsCollecting] = useState(false);
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
+
+  useEffect(() => {
+    if (isSuccess || isError) {
+      setIsCollecting(false);
+    }
+  }, [isSuccess, isError]);
+
+  const handleCollect = async () => {
+    if (chainId !== baseSepolia.id) {
+      await switchChain({ chainId: baseSepolia.id });
+    }
+    setIsCollecting(true);
+
+    writeContract({
+      address: BUILDER_CARD_CONTRACT,
+      abi: BuilderCardABI,
+      functionName: "collect",
+      chain: baseSepolia,
+      args: [BigInt(tokenId)],
+    });
+  };
+
   return (
     <Box
       sx={{
@@ -209,8 +243,10 @@ export const BuilderDetails = ({
           size="lg"
           sx={{ width: "100%", backgroundColor: "black" }}
           startDecorator={<LocalActivity />}
+          onClick={() => handleCollect()}
+          loading={isCollecting}
         >
-          Collect
+          {isCollecting ? "" : "Collect"}
         </Button>
       </Box>
     </Box>

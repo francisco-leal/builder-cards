@@ -25,8 +25,8 @@ export default async function BuilderPage({
         />
         <BuilderDetails
           displayName={passport.passport_profile.display_name}
-          bio={passport.passport_profile.bio}
           image={passport.passport_profile.image_url}
+          tokenId={passport.passport_id}
         />
       </Box>
       <Activity />
