@@ -64,7 +64,21 @@ describe(CONTRACT_NAME, function () {
       expect(numberOfTokens).to.equal(previousNumberOfTokens + BigInt("1"));
     });
 
-    it("total supply of the builder token is increased by 1");
+    it("total supply of the builder token is increased by 1", async function () {
+      const { builderCard, otherAccount: collectorAccount } = await loadFixture(
+        deployBuilderCardFixture
+      );
+
+      const tokenId = 3234123;
+      const balanceOfTokenBefore = await builderCard.balanceOf(tokenId);
+
+      // fire
+      await builderCard.connect(collectorAccount).collect(tokenId);
+
+      const balanceOfTokenAfter = await builderCard.balanceOf(tokenId);
+
+      expect(balanceOfTokenAfter).to.equal(balanceOfTokenBefore + 1n);
+    });
 
     it("total supply of the NFT is increased by 1");
 
