@@ -36,6 +36,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      collectors: {
+        Row: {
+          balance: number;
+          collector: string;
+          created_at: string;
+          id: number;
+          token_id: number;
+        };
+        Insert: {
+          balance?: number;
+          collector: string;
+          created_at?: string;
+          id?: number;
+          token_id: number;
+        };
+        Update: {
+          balance?: number;
+          collector?: string;
+          created_at?: string;
+          id?: number;
+          token_id?: number;
+        };
+        Relationships: [];
+      };
       collects: {
         Row: {
           collector: string;
@@ -65,7 +89,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      update_card_stats: {
+      update_all_stats: {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };

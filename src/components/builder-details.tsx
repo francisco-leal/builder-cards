@@ -13,17 +13,22 @@ import BuilderCardABI from "@/lib/abi/BuilderCard.json";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { BUILDER_CARD_CONTRACT, BLOCKSCOUT_URL } from "@/constants";
+import { parseEther } from "viem";
+import { Collectors } from "@/functions/top-collectors";
 
 export const BuilderDetails = ({
   displayName,
   image,
-  tokenId,
   totalSupply,
+  wallet,
+  collectors,
 }: {
   displayName: string;
   image: string;
   tokenId: number;
   totalSupply: number | undefined;
+  wallet: `0x${string}`;
+  collectors: Collectors[];
 }) => {
   const { data: hash, writeContract } = useWriteContract();
   const { isSuccess, isError } = useWaitForTransactionReceipt({
@@ -45,7 +50,7 @@ export const BuilderDetails = ({
         });
         fetch(`/api/collect`, {
           method: "POST",
-          body: JSON.stringify({ hash }),
+          body: JSON.stringify({ hash, wallet }),
         });
       } else {
         toast.error("Transaction failed");
@@ -76,8 +81,13 @@ export const BuilderDetails = ({
       abi: BuilderCardABI,
       functionName: "collect",
       chain: baseSepolia,
-      args: [BigInt(tokenId)],
+      args: [wallet],
+      value: parseEther("0.001"),
     });
+  };
+
+  const shortenAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
@@ -174,80 +184,37 @@ export const BuilderDetails = ({
             Top Collectors
           </Typography>
         </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            paddingY: "12px",
-            paddingX: "16px",
-            borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
-            alignItems: "center",
-            background: "white",
-          }}
-        >
-          <Avatar src={image} sx={{ width: "38", height: "38" }} />
-          <Typography level="body-md" sx={{ marginLeft: 2 }}>
-            {displayName}
-          </Typography>
-          <Chip
-            variant="solid"
-            color="neutral"
-            size="sm"
-            sx={{ marginLeft: "auto", paddingY: "4px" }}
+        {collectors.map((collector, index) => (
+          <Box
+            key={`${collector.id}-collector`}
+            sx={{
+              display: "flex",
+              flexDirection: "row",
+              paddingY: "12px",
+              paddingX: "16px",
+              borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
+              alignItems: "center",
+              background: "white",
+              borderBottomLeftRadius:
+                index === collectors.length - 1 ? "16px" : "0px",
+              borderBottomRightRadius:
+                index === collectors.length - 1 ? "16px" : "0px",
+            }}
           >
-            x8
-          </Chip>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            paddingY: "12px",
-            paddingX: "16px",
-            borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
-            alignItems: "center",
-            background: "white",
-          }}
-        >
-          <Avatar src={image} sx={{ width: "38", height: "38" }} />
-          <Typography level="body-md" sx={{ marginLeft: 2 }}>
-            {displayName}
-          </Typography>
-          <Chip
-            variant="solid"
-            color="neutral"
-            size="sm"
-            sx={{ marginLeft: "auto", paddingY: "4px" }}
-          >
-            x8
-          </Chip>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            paddingY: "12px",
-            paddingX: "16px",
-            borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
-            alignItems: "center",
-            background: "white",
-            borderBottomLeftRadius: "16px",
-            borderBottomRightRadius: "16px",
-          }}
-        >
-          <Avatar src={image} sx={{ width: "38", height: "38" }} />
-          <Typography level="body-md" sx={{ marginLeft: 2 }}>
-            {displayName}
-          </Typography>
-          <Chip
-            variant="solid"
-            color="neutral"
-            size="sm"
-            sx={{ marginLeft: "auto", paddingY: "4px" }}
-          >
-            x8
-          </Chip>
-        </Box>
+            <Avatar src={image} sx={{ width: "38", height: "38" }} />
+            <Typography level="body-md" sx={{ marginLeft: 2 }}>
+              {shortenAddress(collector.collector)}
+            </Typography>
+            <Chip
+              variant="solid"
+              color="neutral"
+              size="sm"
+              sx={{ marginLeft: "auto", paddingY: "4px" }}
+            >
+              x{collector.balance}
+            </Chip>
+          </Box>
+        ))}
       </Box>
       <Box
         sx={{

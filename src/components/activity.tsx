@@ -13,6 +13,10 @@ export const Activity = ({ activities }: { activities: Collects[] }) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  if (activities.length === 0) {
+    return <Box marginBottom={"100px"}></Box>;
+  }
+
   return (
     <Box
       sx={{
@@ -28,11 +32,6 @@ export const Activity = ({ activities }: { activities: Collects[] }) => {
       <Typography level="h3" textAlign={"center"}>
         Activity
       </Typography>
-      {activities.length === 0 && (
-        <Typography textAlign={"center"}>
-          Be the first to collect this builder!
-        </Typography>
-      )}
       {activities.map((i) => (
         <Box
           key={`${i.id}-activity`}

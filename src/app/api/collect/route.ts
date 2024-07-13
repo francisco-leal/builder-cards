@@ -2,10 +2,11 @@ import type { NextRequest } from "next/server";
 import { createPublicClient, http, parseAbiItem } from "viem";
 import { baseSepolia } from "viem/chains";
 import { supabase } from "@/db";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 type RequestBody = {
   hash: `0x${string}`;
+  wallet: `0x${string}`;
 };
 
 const baseRPC = process.env.BASE_RPC as string;
@@ -13,7 +14,7 @@ const contractAddress = process.env
   .NEXT_PUBLIC_BUILDER_CARD_CONTRACT as `0x${string}`;
 
 export async function POST(request: NextRequest) {
-  const { hash } = (await request.json()) as RequestBody;
+  const { hash, wallet } = (await request.json()) as RequestBody;
 
   const client = createPublicClient({
     chain: baseSepolia,
@@ -38,15 +39,19 @@ export async function POST(request: NextRequest) {
     }
 
     // insert into cards
-    await supabase.from("cards").upsert(
+    const { error } = await supabase.from("cards").upsert(
       {
         hash: transaction.hash,
         token_id: parseInt(id?.toString()),
       },
       {
-        onConflict: "tokenId",
+        onConflict: "token_id",
       }
     );
+
+    if (error) {
+      console.error(error);
+    }
 
     // insert into collects
     await supabase.from("collects").upsert(
@@ -63,8 +68,10 @@ export async function POST(request: NextRequest) {
     revalidateTag(`activities_${id}`);
 
     // create supabase rpc call to update the number of holders && totalSupply of the card or use onchain data?
-    await supabase.rpc("update_card_stats");
+    await supabase.rpc("update_all_stats");
     revalidateTag(`cards_${id}`);
+
+    revalidatePath(`/builder/${wallet}`);
   }
 
   return Response.json(

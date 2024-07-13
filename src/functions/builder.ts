@@ -2,15 +2,18 @@
 import { supabase } from "@/db";
 import { unstable_cache } from "next/cache";
 import { CACHE_24_HOURS } from "@/constants";
+import { addressToId } from "./onchain";
 
-export const getBuilderCard = async (id: string) => {
+export const getBuilderCard = async (id: `0x${string}`) => {
   return unstable_cache(
-    async (id: string) => {
+    async (id: `0x${string}`) => {
       try {
+        const tokenId = await addressToId(id);
+
         const { data, error } = await supabase
           .from("cards")
           .select("*")
-          .eq("tokenId", id)
+          .eq("token_id", tokenId)
           .single()
           .throwOnError();
 

@@ -3,15 +3,17 @@ import { Box } from "@mui/joy";
 import { Activity, BuilderCard, BuilderDetails } from "@/components";
 import { getBuilderActivities } from "@/functions/activity";
 import { getBuilderCard } from "@/functions/builder";
+import { getTopCollectors } from "@/functions/top-collectors";
 
 export default async function BuilderPage({
   params,
 }: {
-  params: { id: string };
+  params: { id: `0x${string}` };
 }) {
   const { passport } = await getPassportById(params.id);
   const { activities } = await getBuilderActivities(params.id);
   const { card } = await getBuilderCard(params.id);
+  const { collectors } = await getTopCollectors(params.id);
 
   return (
     <>
@@ -33,6 +35,8 @@ export default async function BuilderPage({
           image={passport.passport_profile.image_url}
           tokenId={passport.passport_id}
           totalSupply={card?.total_supply}
+          wallet={passport.main_wallet}
+          collectors={collectors}
         />
       </Box>
       <Activity activities={activities} />
