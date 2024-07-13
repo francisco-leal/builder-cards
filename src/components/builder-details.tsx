@@ -1,5 +1,13 @@
 "use client";
-import { Box, Button, Chip, Typography, AspectRatio, Avatar } from "@mui/joy";
+import {
+  Box,
+  Button,
+  Chip,
+  Typography,
+  AspectRatio,
+  Avatar,
+  Skeleton,
+} from "@mui/joy";
 import { Share, ShowChart, MoreVert, LocalActivity } from "@mui/icons-material";
 import {
   useWriteContract,
@@ -135,7 +143,7 @@ export const BuilderDetails = ({
                   index === collectors.length - 1 ? "16px" : "0px",
               }}
             >
-              <Avatar src={image} sx={{ width: "38", height: "38" }} />
+              <Avatar src={""} sx={{ width: "38", height: "38" }} />
               <Typography level="body-md" sx={{ marginLeft: 2 }}>
                 {shortenAddress(collector.collector)}
               </Typography>
