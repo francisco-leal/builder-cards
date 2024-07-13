@@ -9,9 +9,12 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
-const BASE_SEPOLIA_API_KEY = vars.get("BASE_SEPOLIA_API_KEY");
-const PRIVATE_KEY = vars.get("PRIVATE_KEY");
-const BASE_API_KEY = vars.get("BASE_API_KEY");
+const BASE_SEPOLIA_API_KEY = vars.get("BASE_SEPOLIA_API_KEY", "");
+const PRIVATE_KEY = vars.get(
+  "PRIVATE_KEY",
+  "0x0000000000000000000000000000000000000000000000000000000000000000"
+);
+const BASE_API_KEY = vars.get("BASE_API_KEY", "");
 
 const config: HardhatUserConfig = {
   solidity: "0.8.24",
