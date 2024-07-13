@@ -100,73 +100,6 @@ export const BuilderDetails = ({
         position: "relative",
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            padding: "5.644px 11.944px 5.644px 6.885px",
-            backgroundColor: "white",
-            borderRadius: "16px",
-            alignItems: "center",
-          }}
-        >
-          <AspectRatio
-            ratio="1/1"
-            sx={{ width: 40, height: 40, borderRadius: "10px" }}
-          >
-            <img
-              src={image}
-              alt={`${displayName}-image-details`}
-              width={40}
-              height={40}
-            />
-          </AspectRatio>
-          <Typography level="body-md" sx={{ marginLeft: 2 }}>
-            {displayName}
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            gap: 1,
-            padding: "-5.644px -11.944px -5.644px -6.885px",
-          }}
-        >
-          <Button
-            variant="outlined"
-            color="neutral"
-            size="sm"
-            sx={{ padding: "0.75rem", background: "white" }}
-          >
-            <Share />
-          </Button>
-          <Button
-            variant="outlined"
-            color="neutral"
-            size="sm"
-            sx={{ padding: "0.75rem", background: "white" }}
-          >
-            <ShowChart />
-          </Button>
-          <Button
-            variant="outlined"
-            color="neutral"
-            size="sm"
-            sx={{ padding: "0.75rem", background: "white" }}
-          >
-            <MoreVert />
-          </Button>
-        </Box>
-      </Box>
       {collectors.length > 0 && (
         <Box sx={{ display: "flex", flexDirection: "column", border: "0px" }}>
           <Box
@@ -234,15 +167,6 @@ export const BuilderDetails = ({
           zIndex: 10,
         }}
       >
-        <Typography
-          level="body-sm"
-          textColor="common.black"
-          textAlign={"center"}
-        >
-          {(totalSupply ?? 0) > 0
-            ? `x${totalSupply} collected`
-            : "Be the first to collect!"}
-        </Typography>
         <Button
           size="lg"
           sx={{ width: "100%", backgroundColor: "black" }}
@@ -252,6 +176,15 @@ export const BuilderDetails = ({
         >
           {isCollecting ? "" : "Collect"}
         </Button>
+        <Typography
+          level="body-sm"
+          textColor="common.black"
+          textAlign={"center"}
+        >
+          {(totalSupply ?? 0) > 0
+            ? `x${totalSupply} collected`
+            : "Be the first to collect!"}
+        </Typography>
       </Box>
     </Box>
   );
