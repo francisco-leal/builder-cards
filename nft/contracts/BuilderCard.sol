@@ -6,10 +6,14 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract BuilderCard is ERC1155 {
     address _platformAddress;
+
     mapping(uint256 _id => uint256 _balanceOfId) _balancesOfIds;
+
     mapping(address _collector => uint256 _balanceOfCollector) _balancesOfCollectors;
 
     mapping(address _builder => uint256 _id) public builderIds;
+
+    mapping(address _beneficiary => uint256 _earning) _earnings;
 
     uint256 _nftBalance;
 
@@ -55,16 +59,19 @@ contract BuilderCard is ERC1155 {
 
         // Financial part starts here:
         //----------------------------
-
         if (firstMint) {
             payable(msg.sender).transfer(FIRST_COLLECTOR_REWARD);
+            _earnings[msg.sender] += FIRST_COLLECTOR_REWARD;
         }
 
         payable(_builder).transfer(BUILDER_REWARD);
+        _earnings[_builder] += BUILDER_REWARD;
 
-        payable(_platformAddress).transfer(
-            TOTAL_COLLECT_FEE - FIRST_COLLECTOR_REWARD - BUILDER_REWARD
-        );
+        uint256 _platformEarning = TOTAL_COLLECT_FEE -
+            FIRST_COLLECTOR_REWARD -
+            BUILDER_REWARD;
+        payable(_platformAddress).transfer(_platformEarning);
+        _earnings[_platformAddress] += _platformEarning;
     }
 
     function balanceOfBuilder(
@@ -92,5 +99,9 @@ contract BuilderCard is ERC1155 {
         address _collector
     ) public view returns (uint256) {
         return _balancesOfCollectors[_collector];
+    }
+
+    function earnings(address _beneficiary) public view returns (uint256) {
+        return _earnings[_beneficiary];
     }
 }

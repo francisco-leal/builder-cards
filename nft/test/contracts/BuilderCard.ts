@@ -465,14 +465,34 @@ describe(CONTRACT_NAME, function () {
   });
 
   describe("#earnings", function () {
-    // input: 1. token id
-    // output: returns the ETH earnings for given token id
-    // or
-    // no input
-    // output: returns the ETH earnings for all tokens
-    // or
-    // no input
-    // output: returns the ETH earnings for platform
-    it("x");
+    it("returns the earnings for each party involved", async function () {
+      const {
+        builderCard,
+        otherAccount: collectorAccount,
+        builderAccount,
+        platformAccount,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      const weiForValue = hre.ethers.parseEther("0.001");
+
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+
+      // fire
+      const earningsForCollector = await builderCard.earnings(
+        collectorAccount.address
+      );
+      const earningsForBuilder = await builderCard.earnings(
+        builderAccount.address
+      );
+      const earningsForPlatform = await builderCard.earnings(
+        platformAccount.address
+      );
+
+      expect(earningsForCollector).to.equal(hre.ethers.parseEther("0.0003"));
+      expect(earningsForBuilder).to.equal(hre.ethers.parseEther("0.0005"));
+      expect(earningsForPlatform).to.equal(hre.ethers.parseEther("0.0002"));
+    });
   });
 });
