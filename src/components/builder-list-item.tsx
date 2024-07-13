@@ -8,7 +8,7 @@ export const BuilderListItem = ({ builder }: { builder: TalentPassport }) => {
   return (
     <Box
       component={Link}
-      href={`/builder/${builder.passport_id}`}
+      href={`/builder/${builder.main_wallet}`}
       sx={{
         display: "flex",
         gap: 2,

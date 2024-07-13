@@ -12,20 +12,23 @@ import { baseSepolia } from "viem/chains";
 import BuilderCardABI from "@/lib/abi/BuilderCard.json";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-
-const BUILDER_CARD_CONTRACT = (process.env.NEXT_PUBLIC_BUILDER_CARD_CONTRACT ||
-  "0x0") as `0x${string}`;
-
-const BLOCKSCOUT_URL = "https://base-sepolia.blockscout.com/";
+import { BUILDER_CARD_CONTRACT, BLOCKSCOUT_URL } from "@/constants";
+import { parseEther } from "viem";
+import { Collectors } from "@/functions/top-collectors";
 
 export const BuilderDetails = ({
   displayName,
   image,
-  tokenId,
+  totalSupply,
+  wallet,
+  collectors,
 }: {
   displayName: string;
   image: string;
   tokenId: number;
+  totalSupply: number | undefined;
+  wallet: `0x${string}`;
+  collectors: Collectors[];
 }) => {
   const { data: hash, writeContract } = useWriteContract();
   const { isSuccess, isError } = useWaitForTransactionReceipt({
@@ -44,6 +47,10 @@ export const BuilderDetails = ({
             label: "View",
             onClick: () => window.open(`${BLOCKSCOUT_URL}tx/${hash}`),
           },
+        });
+        fetch(`/api/collect`, {
+          method: "POST",
+          body: JSON.stringify({ hash, wallet }),
         });
       } else {
         toast.error("Transaction failed");
@@ -74,8 +81,13 @@ export const BuilderDetails = ({
       abi: BuilderCardABI,
       functionName: "collect",
       chain: baseSepolia,
-      args: [BigInt(tokenId)],
+      args: [wallet],
+      value: parseEther("0.001"),
     });
+  };
+
+  const shortenAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
@@ -172,80 +184,37 @@ export const BuilderDetails = ({
             Top Collectors
           </Typography>
         </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            paddingY: "12px",
-            paddingX: "16px",
-            borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
-            alignItems: "center",
-            background: "white",
-          }}
-        >
-          <Avatar src={image} sx={{ width: "38", height: "38" }} />
-          <Typography level="body-md" sx={{ marginLeft: 2 }}>
-            {displayName}
-          </Typography>
-          <Chip
-            variant="solid"
-            color="neutral"
-            size="sm"
-            sx={{ marginLeft: "auto", paddingY: "4px" }}
+        {collectors.map((collector, index) => (
+          <Box
+            key={`${collector.id}-collector`}
+            sx={{
+              display: "flex",
+              flexDirection: "row",
+              paddingY: "12px",
+              paddingX: "16px",
+              borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
+              alignItems: "center",
+              background: "white",
+              borderBottomLeftRadius:
+                index === collectors.length - 1 ? "16px" : "0px",
+              borderBottomRightRadius:
+                index === collectors.length - 1 ? "16px" : "0px",
+            }}
           >
-            x8
-          </Chip>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            paddingY: "12px",
-            paddingX: "16px",
-            borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
-            alignItems: "center",
-            background: "white",
-          }}
-        >
-          <Avatar src={image} sx={{ width: "38", height: "38" }} />
-          <Typography level="body-md" sx={{ marginLeft: 2 }}>
-            {displayName}
-          </Typography>
-          <Chip
-            variant="solid"
-            color="neutral"
-            size="sm"
-            sx={{ marginLeft: "auto", paddingY: "4px" }}
-          >
-            x8
-          </Chip>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            paddingY: "12px",
-            paddingX: "16px",
-            borderBottom: "1px solid rgba(0, 0, 0, 0.19)",
-            alignItems: "center",
-            background: "white",
-            borderBottomLeftRadius: "16px",
-            borderBottomRightRadius: "16px",
-          }}
-        >
-          <Avatar src={image} sx={{ width: "38", height: "38" }} />
-          <Typography level="body-md" sx={{ marginLeft: 2 }}>
-            {displayName}
-          </Typography>
-          <Chip
-            variant="solid"
-            color="neutral"
-            size="sm"
-            sx={{ marginLeft: "auto", paddingY: "4px" }}
-          >
-            x8
-          </Chip>
-        </Box>
+            <Avatar src={image} sx={{ width: "38", height: "38" }} />
+            <Typography level="body-md" sx={{ marginLeft: 2 }}>
+              {shortenAddress(collector.collector)}
+            </Typography>
+            <Chip
+              variant="solid"
+              color="neutral"
+              size="sm"
+              sx={{ marginLeft: "auto", paddingY: "4px" }}
+            >
+              x{collector.balance}
+            </Chip>
+          </Box>
+        ))}
       </Box>
       <Box
         sx={{
@@ -257,7 +226,7 @@ export const BuilderDetails = ({
           position: "fixed",
           bottom: 0,
           left: 0,
-          width: "calc(100% - 32px)",
+          width: "calc(100% - 48px)",
           backgroundColor: "#F0EFF7",
           padding: "16px",
           zIndex: 10,
@@ -268,7 +237,9 @@ export const BuilderDetails = ({
           textColor="common.black"
           textAlign={"center"}
         >
-          x72 collected
+          {(totalSupply ?? 0) > 0
+            ? `x${totalSupply} collected`
+            : "Be the first to collect!"}
         </Typography>
         <Button
           size="lg"

@@ -1,6 +1,9 @@
 [
   {
-    "inputs": [{ "internalType": "string", "name": "uri_", "type": "string" }],
+    "inputs": [
+      { "internalType": "string", "name": "uri_", "type": "string" },
+      { "internalType": "address", "name": "_pa", "type": "address" }
+    ],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
@@ -177,6 +180,15 @@
     "type": "event"
   },
   {
+    "inputs": [],
+    "name": "balance",
+    "outputs": [
+      { "internalType": "uint256", "name": "_nftBln", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       { "internalType": "address", "name": "account", "type": "address" },
       { "internalType": "uint256", "name": "id", "type": "uint256" }
@@ -199,10 +211,53 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "uint256", "name": "_id", "type": "uint256" }],
+    "inputs": [
+      { "internalType": "address", "name": "_builder", "type": "address" }
+    ],
+    "name": "balanceOfBuilder",
+    "outputs": [
+      { "internalType": "uint256", "name": "_balance", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_collector", "type": "address" }
+    ],
+    "name": "balanceOfCollector",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_collector", "type": "address" },
+      { "internalType": "address", "name": "_builder", "type": "address" }
+    ],
+    "name": "balanceOfCollectorForBuilder",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_builder", "type": "address" }
+    ],
+    "name": "builderIds",
+    "outputs": [
+      { "internalType": "uint256", "name": "_id", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_builder", "type": "address" }
+    ],
     "name": "collect",
     "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
