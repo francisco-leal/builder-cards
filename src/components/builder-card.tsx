@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/joy";
+import { Box, Typography, AspectRatio } from "@mui/joy";
 
 export const BuilderCard = ({
   image,
@@ -21,12 +21,15 @@ export const BuilderCard = ({
         borderLeft: { xs: "0px", lg: "1px solid black" },
         borderTop: "1px solid black",
         borderBottom: "1px solid black",
-        padding: { xs: 1, lg: 3 },
-        paddingBottom: { xs: 3, lg: 5 },
-        borderRadius: { xs: 0, lg: "8px" },
+        padding: { xs: 2, lg: 4 },
+        borderRadius: "22px",
+        border: "2px solid #454547",
+        background: "#FFF",
       }}
     >
-      <img src={image} alt={`${name}-image`} width={300} height={300} />
+      <AspectRatio ratio="1/1" sx={{ borderRadius: "22px", width: "300px" }}>
+        <img src={image} alt={`${name}-image`} width={300} height={300} />
+      </AspectRatio>
       <Box
         sx={{
           display: "flex",
@@ -35,7 +38,7 @@ export const BuilderCard = ({
           alignItems: "center",
         }}
       >
-        <Typography level="h3" sx={{ marginTop: "24px" }}>
+        <Typography level="h3" sx={{ marginTop: "16px" }}>
           {displayName}
         </Typography>
         <Typography level="body-md">Builder Score: {score}</Typography>

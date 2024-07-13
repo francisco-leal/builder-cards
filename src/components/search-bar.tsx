@@ -23,10 +23,15 @@ export function SearchBar({ placeholder }: { placeholder: string }) {
     <Box sx={{ maxWidth: "485px", width: "100%" }}>
       <Input
         placeholder={placeholder}
-        sx={{ width: "100%", paddingX: 2 }}
+        sx={{
+          width: "100%",
+          paddingY: "12px",
+          paddingX: "16px",
+          borderRadius: "36px",
+        }}
         onChange={(e) => handleSearch(e.target.value)}
         defaultValue={searchParams.get("query")?.toString()}
-        endDecorator={<SearchOutlined />}
+        startDecorator={<SearchOutlined />}
       />
     </Box>
   );
