@@ -11,4 +11,8 @@ contract BuilderCard is ERC1155 {
         return
             string.concat(super.uri(_id), "/", Strings.toString(_id), ".json");
     }
+
+    function collect(uint256 _id) public {
+        _mint(msg.sender, _id, 1, "");
+    }
 }

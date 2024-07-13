@@ -9,13 +9,13 @@ const URI = "https://token-cdn-domain";
 describe(CONTRACT_NAME, function () {
   async function deployBuilderCardFixture() {
     // Contracts are deployed using the first signer/account by default
-    const [contractDeployer] = await hre.ethers.getSigners();
+    const [contractDeployer, otherAccount] = await hre.ethers.getSigners();
 
     const BuilderCard = await hre.ethers.getContractFactory(CONTRACT_NAME);
 
     const builderCard = await BuilderCard.deploy(URI);
 
-    return { builderCard, contractDeployer };
+    return { builderCard, contractDeployer, otherAccount };
   }
 
   describe("#constructor", async function () {
@@ -41,7 +41,28 @@ describe(CONTRACT_NAME, function () {
   });
 
   describe("#collect", function () {
-    it("collector balance on input token is increased by 1");
+    it("collector balance on input token is increased by 1", async function () {
+      const { builderCard, otherAccount: collectorAccount } = await loadFixture(
+        deployBuilderCardFixture
+      );
+
+      const tokenId = 3234123;
+
+      const previousNumberOfTokens = await builderCard.balanceOf(
+        collectorAccount.address,
+        tokenId
+      );
+
+      // fire
+      await builderCard.connect(collectorAccount).collect(tokenId);
+
+      const numberOfTokens = await builderCard.balanceOf(
+        collectorAccount.address,
+        tokenId
+      );
+
+      expect(numberOfTokens).to.equal(previousNumberOfTokens + BigInt("1"));
+    });
 
     it("total supply of the builder token is increased by 1");
 
