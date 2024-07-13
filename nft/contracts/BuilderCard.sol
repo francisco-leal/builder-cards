@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 contract BuilderCard is ERC1155 {
     address _platformAddress;
     mapping(uint256 _id => uint256 _balanceOfId) _balancesOfIds;
+    mapping(address _collector => uint256 _balanceOfCollector) _balancesOfCollectors;
 
-    mapping(address _builder => uint256 _id) _builderIds;
+    mapping(address _builder => uint256 _id) public builderIds;
 
     uint256 _nftBalance;
 
@@ -34,14 +35,14 @@ contract BuilderCard is ERC1155 {
             "not enough value send in the transaction"
         );
 
-        uint256 _id = _builderIds[_builder];
+        uint256 _id = builderIds[_builder];
         bool firstMint = false;
 
         if (_id == 0) {
             firstMint = true;
             _idSequence += 1;
             _id = _idSequence;
-            _builderIds[_builder] = _id;
+            builderIds[_builder] = _id;
         }
 
         _mint(msg.sender, _id, 1, "");
@@ -49,6 +50,11 @@ contract BuilderCard is ERC1155 {
         _balancesOfIds[_id] += 1;
 
         _nftBalance += 1;
+
+        _balancesOfCollectors[msg.sender] += 1;
+
+        // Financial part starts here:
+        //----------------------------
 
         if (firstMint) {
             payable(msg.sender).transfer(FIRST_COLLECTOR_REWARD);
@@ -64,7 +70,7 @@ contract BuilderCard is ERC1155 {
     function balanceOfBuilder(
         address _builder
     ) public view returns (uint256 _balance) {
-        uint256 _id = _builderIds[_builder];
+        uint256 _id = builderIds[_builder];
 
         _balance = _balancesOfIds[_id];
     }
@@ -73,12 +79,18 @@ contract BuilderCard is ERC1155 {
         _nftBln = _nftBalance;
     }
 
-    function balanceOfCollector(
+    function balanceOfCollectorForBuilder(
         address _collector,
         address _builder
     ) public view returns (uint256) {
-        uint256 _id = _builderIds[_builder];
+        uint256 _id = builderIds[_builder];
 
         return super.balanceOf(_collector, _id);
+    }
+
+    function balanceOfCollector(
+        address _collector
+    ) public view returns (uint256) {
+        return _balancesOfCollectors[_collector];
     }
 }

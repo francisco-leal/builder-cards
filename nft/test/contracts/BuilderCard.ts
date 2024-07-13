@@ -56,17 +56,18 @@ describe(CONTRACT_NAME, function () {
   });
 
   describe("#collect", function () {
-    it("collector balance on input token is increased by 1", async function () {
+    it("collector balance on input builder is increased by 1", async function () {
       const {
         builderCard,
         otherAccount: collectorAccount,
         builderAccount,
       } = await loadFixture(deployBuilderCardFixture);
 
-      const previousNumberOfTokens = await builderCard.balanceOfCollector(
-        collectorAccount.address,
-        builderAccount.address
-      );
+      const previousNumberOfTokens =
+        await builderCard.balanceOfCollectorForBuilder(
+          collectorAccount.address,
+          builderAccount.address
+        );
 
       // fire
       const weiForValue = hre.ethers.parseEther("100");
@@ -75,7 +76,7 @@ describe(CONTRACT_NAME, function () {
         .connect(collectorAccount)
         .collect(builderAccount.address, { value: weiForValue });
 
-      const numberOfTokens = await builderCard.balanceOfCollector(
+      const numberOfTokens = await builderCard.balanceOfCollectorForBuilder(
         collectorAccount.address,
         builderAccount.address
       );
@@ -127,6 +128,31 @@ describe(CONTRACT_NAME, function () {
       const balanceOfNFTAfter = await builderCard.balance();
 
       expect(balanceOfNFTAfter).to.equal(balanceOfNFTBefore + 1n);
+    });
+
+    it("increases the balance of the collector for any builder", async function () {
+      const {
+        builderCard,
+        otherAccount: collectorAccount,
+        builderAccount,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      const balanceOfCollectorBefore = await builderCard.balanceOfCollector(
+        collectorAccount.address
+      );
+
+      // fire
+      const weiForValue = hre.ethers.parseEther("100");
+
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+
+      const balanceOfCollectorAfter = await builderCard.balanceOfCollector(
+        collectorAccount.address
+      );
+
+      expect(balanceOfCollectorAfter).to.equal(balanceOfCollectorBefore + 1n);
     });
 
     context("when collector is the first collector of the token", function () {
@@ -333,21 +359,109 @@ describe(CONTRACT_NAME, function () {
     });
   });
 
-  describe("#balanceOf specific token", function () {
-    // input: 1. owner address
-    //        2. token id
-    // returns: number of instances of given token this address owns
-    it("x");
+  describe("#balanceOfCollector for builder", function () {
+    it("returns the number of mints this collector has done on given builder", async function () {
+      const {
+        builderCard,
+        otherAccount: collectorAccount,
+        builderAccount,
+        otherCollector,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      const weiForValue = hre.ethers.parseEther("0.001");
+
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(otherCollector)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+
+      // fire
+      const numberOfMints = await builderCard.balanceOfCollectorForBuilder(
+        collectorAccount.address,
+        builderAccount.address
+      );
+
+      expect(numberOfMints).to.equal(2);
+    });
   });
 
-  describe("#balanceOf any token uniquely", function () {
-    // input: 1. owner address
-    // returns: number of instances of any unique tokens owner owns
-    it("x");
+  describe("#balanceOfCollector any builder", function () {
+    it("returns the number of mints this collector has done on any builder", async function () {
+      const {
+        builderCard,
+        otherAccount: collectorAccount,
+        builderAccount,
+        otherCollector,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      const weiForValue = hre.ethers.parseEther("0.001");
+
+      const secondBuilderAccount = hre.ethers.Wallet.createRandom();
+
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(otherCollector)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(collectorAccount)
+        .collect(secondBuilderAccount.address, { value: weiForValue });
+
+      // fire
+      const numberOfMints = await builderCard.balanceOfCollector(
+        collectorAccount.address
+      );
+
+      expect(numberOfMints).to.equal(3);
+    });
   });
 
-  describe("#balanceOf tokenId", function () {
-    it("returns the number of collections for the given token");
+  describe("#balanceOfBuilder", function () {
+    it("returns the number of collections for the given builder", async function () {
+      const {
+        builderCard,
+        otherAccount: collectorAccount,
+        builderAccount,
+        otherCollector,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      const weiForValue = hre.ethers.parseEther("0.001");
+
+      const secondBuilderAccount = hre.ethers.Wallet.createRandom();
+
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(otherCollector)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(collectorAccount)
+        .collect(builderAccount.address, { value: weiForValue });
+      await builderCard
+        .connect(collectorAccount)
+        .collect(secondBuilderAccount.address, { value: weiForValue });
+
+      // fire
+      const numberOfMintsForBuilder = await builderCard.balanceOfBuilder(
+        builderAccount.address
+      );
+      const numberOfMintsForSecondBuilder = await builderCard.balanceOfBuilder(
+        secondBuilderAccount.address
+      );
+
+      expect(numberOfMintsForBuilder).to.equal(3);
+      expect(numberOfMintsForSecondBuilder).to.equal(1);
+    });
   });
 
   describe("#earnings", function () {
