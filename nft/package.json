@@ -8,6 +8,7 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2",
     "hardhat": "^2.22.6"
   },
   "devDependencies": {
