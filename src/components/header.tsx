@@ -1,3 +1,4 @@
+"use client";
 import { Box, Typography, Button } from "@mui/joy";
 import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
 import Link from "next/link";
@@ -19,13 +20,16 @@ export function Header() {
         component={Link}
         href="/"
         variant="plain"
-        sx={{ marginLeft: "32px" }}
+        sx={{ display: "flex", flexDirection: "row", padding: 0 }}
       >
-        <Typography level="h3">Builder Cards</Typography>
+        <Typography level="h3" fontWeight={"600"}>
+          Builder
+        </Typography>
+        <Typography level="h3" fontWeight={"200"}>
+          Cards
+        </Typography>
       </Button>
-      <Box sx={{ marginRight: "32px" }}>
-        <DynamicWidget />
-      </Box>
+      <DynamicWidget />
     </Box>
   );
 }

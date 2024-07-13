@@ -8,8 +8,8 @@ export const Activity = () => {
         flexDirection: "column",
         gap: 1,
         paddingX: 2,
-        marginBottom: 3,
         alignSelf: { sx: "start", lg: "center" },
+        marginBottom: "100px",
       }}
     >
       <Typography level="h3" textAlign={"center"}>

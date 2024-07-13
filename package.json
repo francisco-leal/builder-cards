@@ -21,6 +21,7 @@
     "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18",
+    "sonner": "^1.5.0",
     "use-debounce": "^10.0.1",
     "viem": "^2.17.3",
     "wagmi": "^2.10.10"

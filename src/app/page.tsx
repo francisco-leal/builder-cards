@@ -15,8 +15,8 @@ export default async function Home({
 
   return (
     <>
-      <Typography fontWeight={"bold"} level="body-lg">
-        Collect your favorite builders
+      <Typography level="h1" fontWeight={"500"}>
+        Collect your favorite builders!
       </Typography>
       <SearchBar placeholder="Search for builders..." />
       <Suspense key={query + currentPage} fallback={<BuildersTableSkeleton />}>

@@ -4,6 +4,9 @@ import "./globals.css";
 import { Web3Context } from "@/context";
 import { Box } from "@mui/joy";
 import { Header } from "@/components";
+import { CssVarsProvider } from "@mui/joy/styles";
+import { theme } from "@/theme";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,23 +23,33 @@ export default function RootLayout({
   return (
     <html lang="en">
       <Web3Context>
-        <body className={inter.className} style={{ margin: 0 }}>
+        <CssVarsProvider theme={theme}>
           <Box
-            component="main"
+            component="body"
+            className={inter.className}
             sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              minHeight: "100vh",
-              minWidth: "100vw",
-              backgroundColor: "background.default",
-              gap: 2,
+              margin: 0,
+              background: "#F0EFF7",
             }}
           >
-            <Header />
-            {children}
+            <Box
+              component="main"
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                minHeight: "100vh",
+                gap: 2,
+                paddingX: 2,
+                paddingBottom: 2,
+              }}
+            >
+              <Header />
+              {children}
+              <Toaster />
+            </Box>
           </Box>
-        </body>
+        </CssVarsProvider>
       </Web3Context>
     </html>
   );

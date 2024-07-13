@@ -1,4 +1,6 @@
-import { Box, Chip, Typography } from "@mui/joy";
+"use client";
+import { Button, Box, Chip, Typography, Avatar } from "@mui/joy";
+import { useRouter } from "next/navigation";
 
 export const PortfolioCard = ({
   image,
@@ -7,6 +9,7 @@ export const PortfolioCard = ({
   score,
   collectedCount,
   mutual,
+  tokenId,
 }: {
   image: string;
   name: string;
@@ -14,9 +17,12 @@ export const PortfolioCard = ({
   score: number;
   collectedCount: number;
   mutual: boolean;
+  tokenId: number;
 }) => {
+  const router = useRouter();
   return (
-    <Box
+    <Button
+      onClick={() => router.push(`/builder/${tokenId}`)}
       sx={{
         display: "flex",
         flexDirection: "column",
@@ -25,14 +31,20 @@ export const PortfolioCard = ({
         borderLeft: { xs: "0px", lg: "1px solid rgba(99, 107, 116, 0.2)" },
         borderTop: { xs: "0px", lg: "1px solid rgba(99, 107, 116, 0.2)" },
         borderBottom: "1px solid rgba(99, 107, 116, 0.2)",
-        padding: { xs: 1, lg: 3 },
-        paddingBottom: { xs: 3, lg: 5 },
         position: "relative",
-        width: { xs: "100%", lg: "auto" },
-        borderRadius: { xs: 0, lg: "8px" },
+        width: { xs: "180px", lg: "auto" },
+        borderRadius: "12px",
+        backgroundColor: "white",
+        paddingTop: { xs: 2, lg: 4 },
+        paddingBottom: { xs: 4, lg: 6 },
       }}
+      variant="plain"
     >
-      <img src={image} alt={`${name}-image`} width={300} height={300} />
+      <Avatar
+        src={image}
+        alt={`${name}-image`}
+        sx={{ width: 100, height: 100, borderRadius: "22px" }}
+      />
       <Box
         sx={{
           display: "flex",
@@ -41,17 +53,17 @@ export const PortfolioCard = ({
           alignItems: "center",
         }}
       >
-        <Typography level="h3" sx={{ marginTop: "24px" }}>
+        <Typography level="body-lg" sx={{ marginTop: "12px" }}>
           {displayName}
         </Typography>
-        <Typography level="body-md">Builder Score: {score}</Typography>
+        <Typography level="body-sm">Builder Score: {score}</Typography>
       </Box>
       {mutual && (
         <Chip
           size="sm"
           variant="solid"
+          color="neutral"
           sx={{
-            backgroundColor: "black",
             position: "absolute",
             bottom: "8px",
             left: "8px",
@@ -63,8 +75,8 @@ export const PortfolioCard = ({
       <Chip
         size="sm"
         variant="solid"
+        color="neutral"
         sx={{
-          backgroundColor: "black",
           position: "absolute",
           bottom: "8px",
           right: "8px",
@@ -72,6 +84,6 @@ export const PortfolioCard = ({
       >
         x{collectedCount}
       </Chip>
-    </Box>
+    </Button>
   );
 };
