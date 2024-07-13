@@ -18,10 +18,12 @@ export const BuilderDetails = ({
   displayName,
   image,
   tokenId,
+  totalSupply,
 }: {
   displayName: string;
   image: string;
   tokenId: number;
+  totalSupply: number | undefined;
 }) => {
   const { data: hash, writeContract } = useWriteContract();
   const { isSuccess, isError } = useWaitForTransactionReceipt({
@@ -268,7 +270,9 @@ export const BuilderDetails = ({
           textColor="common.black"
           textAlign={"center"}
         >
-          x72 collected
+          {(totalSupply ?? 0) > 0
+            ? `x${totalSupply} collected`
+            : "Be the first to collect!"}
         </Typography>
         <Button
           size="lg"

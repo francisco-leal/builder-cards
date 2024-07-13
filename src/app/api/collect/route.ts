@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     await supabase.from("cards").upsert(
       {
         hash: transaction.hash,
-        tokenId: parseInt(id?.toString()),
+        token_id: parseInt(id?.toString()),
       },
       {
         onConflict: "tokenId",
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       {
         collector: to,
         hash: transaction.hash,
-        tokenId: parseInt(id?.toString()),
+        token_id: parseInt(id?.toString()),
       },
       {
         onConflict: "hash",
@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
     revalidateTag(`activities_${id}`);
 
     // create supabase rpc call to update the number of holders && totalSupply of the card or use onchain data?
+    await supabase.rpc("update_card_stats");
+    revalidateTag(`cards_${id}`);
   }
 
   return Response.json(

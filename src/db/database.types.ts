@@ -15,7 +15,7 @@ export type Database = {
           hash: string;
           holders: number;
           id: string;
-          tokenId: number;
+          token_id: number;
           total_supply: number;
         };
         Insert: {
@@ -23,7 +23,7 @@ export type Database = {
           hash: string;
           holders?: number;
           id?: string;
-          tokenId: number;
+          token_id: number;
           total_supply?: number;
         };
         Update: {
@@ -31,7 +31,7 @@ export type Database = {
           hash?: string;
           holders?: number;
           id?: string;
-          tokenId?: number;
+          token_id?: number;
           total_supply?: number;
         };
         Relationships: [];
@@ -42,21 +42,21 @@ export type Database = {
           created_at: string;
           hash: string;
           id: number;
-          tokenId: number;
+          token_id: number;
         };
         Insert: {
           collector: string;
           created_at?: string;
           hash: string;
           id?: number;
-          tokenId: number;
+          token_id: number;
         };
         Update: {
           collector?: string;
           created_at?: string;
           hash?: string;
           id?: number;
-          tokenId?: number;
+          token_id?: number;
         };
         Relationships: [];
       };
@@ -65,7 +65,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      update_card_stats: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
     };
     Enums: {
       [_ in never]: never;
