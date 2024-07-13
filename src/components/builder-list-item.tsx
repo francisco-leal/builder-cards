@@ -53,7 +53,7 @@ export const BuilderListItem = ({ builder }: { builder: TalentPassport }) => {
           <Verified htmlColor="black" />
         </Box>
         <Typography level="body-sm" sx={{ textDecoration: "none" }}>
-          #{builder.passport_id}
+          Talent Passport #{builder.passport_id}
         </Typography>
       </Box>
     </Box>
