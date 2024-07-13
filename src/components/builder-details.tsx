@@ -6,6 +6,7 @@ import {
   useWaitForTransactionReceipt,
   useSwitchChain,
   useChainId,
+  useAccount,
 } from "wagmi";
 import { baseSepolia } from "viem/chains";
 import BuilderCardABI from "@/lib/abi/BuilderCard.json";
@@ -33,6 +34,7 @@ export const BuilderDetails = ({
   const [isCollecting, setIsCollecting] = useState(false);
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
+  const { address } = useAccount();
 
   useEffect(() => {
     if (isSuccess || isError) {
@@ -57,6 +59,11 @@ export const BuilderDetails = ({
   }, [hash]);
 
   const handleCollect = async () => {
+    if (!address) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     if (chainId !== baseSepolia.id) {
       await switchChain({ chainId: baseSepolia.id });
     }

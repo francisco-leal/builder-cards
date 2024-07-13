@@ -17,8 +17,6 @@ export const BuilderCard = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        borderRight: { xs: "0px", lg: "1px solid black" },
-        borderLeft: { xs: "0px", lg: "1px solid black" },
         borderTop: "1px solid black",
         borderBottom: "1px solid black",
         padding: { xs: 2, lg: 4 },
