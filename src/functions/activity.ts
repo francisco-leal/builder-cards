@@ -10,30 +10,24 @@ type Tables = Database["public"]["Tables"];
 export type Collects = Tables["collects"]["Row"];
 
 export const getBuilderActivities = async (id: `0x${string}`) => {
-  return unstable_cache(
-    async (id: `0x${string}`) => {
-      try {
-        // Get the token ID of this wallet
-        const tokenId = await addressToId(id);
+  try {
+    // Get the token ID of this wallet
+    const tokenId = await addressToId(id);
 
-        const { data, error } = await supabase
-          .from("collects")
-          .select("*")
-          .eq("token_id", tokenId)
-          .order("created_at", { ascending: false })
-          .throwOnError();
+    const { data, error } = await supabase
+      .from("collects")
+      .select("*")
+      .eq("token_id", tokenId)
+      .order("created_at", { ascending: false })
+      .throwOnError();
 
-        if (error) {
-          return { activities: [] };
-        } else {
-          return { activities: data };
-        }
-      } catch (error) {
-        console.error(error);
-        return { activities: [] };
-      }
-    },
-    [`activities_${id}`],
-    { revalidate: CACHE_24_HOURS }
-  )(id);
+    if (error) {
+      return { activities: [] };
+    } else {
+      return { activities: data };
+    }
+  } catch (error) {
+    console.error(error);
+    return { activities: [] };
+  }
 };
