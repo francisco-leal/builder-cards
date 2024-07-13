@@ -1,0 +1,10 @@
+{
+  "name": "builder-cards-nft",
+  "version": "1.0.0",
+  "description": "The NFT Project for the Builder Cards",
+  "main": "index.js",
+  "repository": "https://github.com/francisco-leal/builder-cards.git",
+  "author": "Panos M. - Francisco L.",
+  "license": "MIT",
+  "private": false
+}
