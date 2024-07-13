@@ -190,7 +190,7 @@ export const BuilderDetails = ({
           textAlign={"center"}
         >
           {(totalSupply ?? 0) > 0
-            ? `x${totalSupply} collected`
+            ? `Collected x${totalSupply}`
             : "Be the first to collect!"}
         </Typography>
       </Box>
