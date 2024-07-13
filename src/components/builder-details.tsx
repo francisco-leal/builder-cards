@@ -45,6 +45,10 @@ export const BuilderDetails = ({
             onClick: () => window.open(`${BLOCKSCOUT_URL}tx/${hash}`),
           },
         });
+        fetch(`/api/collect`, {
+          method: "POST",
+          body: JSON.stringify({ hash }),
+        });
       } else {
         toast.error("Transaction failed");
       }
