@@ -26,7 +26,7 @@ export function Header() {
           Builder
         </Typography>
         <Typography level="h3" fontWeight={"200"}>
-          Cards
+          .Cards
         </Typography>
       </Button>
       <DynamicWidget />
