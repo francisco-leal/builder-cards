@@ -46,3 +46,4 @@ coverage
 coverage.json
 ignition/deployments/chain-31337
 ignition/deployments
+docs/

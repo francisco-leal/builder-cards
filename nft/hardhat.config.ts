@@ -1,5 +1,6 @@
 import { HardhatUserConfig, vars, task } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-docgen";
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -18,6 +19,11 @@ const BASE_API_KEY = vars.get("BASE_API_KEY", "");
 
 const config: HardhatUserConfig = {
   solidity: "0.8.24",
+  docgen: {
+    path: "./docs",
+    clear: true,
+    runOnCompile: true,
+  },
   networks: {
     baseSepolia: {
       url: `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${BASE_SEPOLIA_API_KEY}`,
