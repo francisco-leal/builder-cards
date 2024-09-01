@@ -1,10 +1,16 @@
-import hre from "hardhat";
+import hre, { ethers } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { platform } from "os";
+import { MaxUint256 } from "ethers";
+import calculateTransactionFee from "../calculateTransactionFee";
 
 const CONTRACT_NAME = "BuilderCard";
-const URI = "https://token-cdn-domain";
+const URI = "https://token-cdn-domain/{id}/json";
+
+const COLLECTION_FEE_IN_WEI = ethers.parseEther("0.001");
+const BUILDER_REWARD_IN_WEI = ethers.parseEther("0.0005");
+const FIRST_COLLECTOR_REWARD_IN_WEI = ethers.parseEther("0.0003");
 
 describe(CONTRACT_NAME, function () {
   async function deployBuilderCardFixture() {
@@ -19,7 +25,7 @@ describe(CONTRACT_NAME, function () {
 
     const BuilderCard = await hre.ethers.getContractFactory(CONTRACT_NAME);
 
-    const builderCard = await BuilderCard.deploy(URI, platformAccount.address);
+    const builderCard = await BuilderCard.deploy(URI);
 
     return {
       builderCard,
@@ -31,31 +37,233 @@ describe(CONTRACT_NAME, function () {
     };
   }
 
-  describe("#constructor", async function () {
-    it(`sets the contract uri to ${URI}`, async function () {
-      const BuilderCard = await hre.ethers.getContractFactory(CONTRACT_NAME);
-      const platformAccount = hre.ethers.Wallet.createRandom();
-      const builderCard = await BuilderCard.deploy(
-        URI,
-        platformAccount.address
-      );
-      builderCard.waitForDeployment();
-
-      const anId = 314592;
-      expect(await builderCard.uri(anId)).to.equal(`${URI}/${anId}.json`);
-    });
-  });
-
-  describe("#uri", function () {
-    it("returns the token specific uri", async function () {
-      const { builderCard } = await loadFixture(deployBuilderCardFixture);
-
-      const anId = 314592;
-      expect(await builderCard.uri(anId)).to.equal(`${URI}/${anId}.json`);
-    });
-  });
-
   describe("#collect", function () {
+    describe("finances", function () {
+      context(
+        "when ether value passed is less than the collection fee required",
+        function () {
+          const value = ethers.parseEther("0.0");
+
+          it("reverts with the error about the collection fee requirement", async function () {
+            const { builderCard, otherAccount: builderAccountToCollect } =
+              await loadFixture(deployBuilderCardFixture);
+
+            // fire
+
+            await expect(
+              builderCard.collect(builderAccountToCollect, { value })
+            )
+              .to.be.revertedWithCustomError(
+                builderCard,
+                "WrongValueForCollectionFee"
+              )
+              .withArgs(COLLECTION_FEE_IN_WEI, 0);
+          });
+        }
+      );
+
+      context(
+        "when ether value passed is equal to the collection fee required",
+        function () {
+          const value = COLLECTION_FEE_IN_WEI;
+
+          it("reverts with the error about the collection fee requirement", async function () {
+            const { builderCard, otherAccount: builderAccountToCollect } =
+              await loadFixture(deployBuilderCardFixture);
+
+            // fire
+
+            await expect(
+              builderCard.collect(builderAccountToCollect, { value })
+            ).not.to.be.revertedWithCustomError(
+              builderCard,
+              "WrongValueForCollectionFee"
+            );
+          });
+        }
+      );
+
+      context(
+        "when ether value passed is greater than the collection fee required",
+        function () {
+          const value = ethers.parseEther("0.0011");
+
+          it("does not revert", async function () {
+            const { builderCard, otherAccount: builderAccountToCollect } =
+              await loadFixture(deployBuilderCardFixture);
+
+            // fire
+
+            await expect(
+              builderCard.collect(builderAccountToCollect, { value })
+            ).to.be.revertedWithCustomError(
+              builderCard,
+              "WrongValueForCollectionFee"
+            );
+          });
+        }
+      );
+
+      it("rewards the builder with 0.0005 ether", async function () {
+        const { builderCard, otherAccount: builderAccountToCollect } =
+          await loadFixture(deployBuilderCardFixture);
+
+        const balanceBefore = await ethers.provider.getBalance(
+          builderAccountToCollect
+        );
+
+        // fire
+        await builderCard.collect(builderAccountToCollect, {
+          value: COLLECTION_FEE_IN_WEI,
+        });
+
+        const balanceAfter = await ethers.provider.getBalance(
+          builderAccountToCollect
+        );
+
+        expect(balanceAfter).to.equal(balanceBefore + BUILDER_REWARD_IN_WEI);
+      });
+
+      context(
+        "when collector is the first collector for the given builder card",
+        function () {
+          it("rewards the collector with 0.0003 ether", async function () {
+            const {
+              contractDeployer,
+              builderCard,
+              otherAccount: builderAccountToCollect,
+            } = await loadFixture(deployBuilderCardFixture);
+
+            const balanceBefore = await ethers.provider.getBalance(
+              contractDeployer
+            );
+
+            // fire
+            const trx = await builderCard
+              .connect(contractDeployer)
+              .collect(builderAccountToCollect, {
+                value: COLLECTION_FEE_IN_WEI,
+              });
+
+            const receipt = await trx.wait();
+
+            const transactionFee = calculateTransactionFee(receipt);
+
+            const balanceAfter = await ethers.provider.getBalance(
+              contractDeployer
+            );
+
+            expect(balanceAfter).to.equal(
+              balanceBefore +
+                FIRST_COLLECTOR_REWARD_IN_WEI -
+                COLLECTION_FEE_IN_WEI -
+                transactionFee
+            );
+          });
+
+          it("rewards the platform with 0.001 - 0.005 - 0.0003 which is 0.0002", async function () {
+            const { builderCard, otherAccount: builderAccountToCollect } =
+              await loadFixture(deployBuilderCardFixture);
+
+            const balanceBefore = await ethers.provider.getBalance(builderCard);
+
+            // fire
+            await builderCard.collect(builderAccountToCollect, {
+              value: COLLECTION_FEE_IN_WEI,
+            });
+
+            const balanceAfter = await ethers.provider.getBalance(builderCard);
+
+            expect(balanceAfter).to.equal(
+              balanceBefore +
+                (COLLECTION_FEE_IN_WEI -
+                  BUILDER_REWARD_IN_WEI -
+                  FIRST_COLLECTOR_REWARD_IN_WEI)
+            );
+          });
+        }
+      );
+
+      context(
+        "when collector is not the first collector of the particular builder card",
+        function () {
+          it("doesn't reward them with the first collector reward", async function () {
+            const {
+              contractDeployer,
+              builderCard,
+              otherAccount: builderAccountToCollect,
+              otherCollector,
+            } = await loadFixture(deployBuilderCardFixture);
+
+            const balanceBefore = await ethers.provider.getBalance(
+              otherCollector
+            );
+
+            let trx = await builderCard
+              .connect(contractDeployer)
+              .collect(builderAccountToCollect, {
+                value: COLLECTION_FEE_IN_WEI,
+              });
+
+            await trx.wait();
+
+            // fire OtherCollector collects the same builder card
+
+            trx = await builderCard
+              .connect(otherCollector)
+              .collect(builderAccountToCollect, {
+                value: COLLECTION_FEE_IN_WEI,
+              });
+
+            const receipt = await trx.wait();
+
+            const transactionFee = calculateTransactionFee(receipt);
+
+            const balanceAfter = await ethers.provider.getBalance(
+              otherCollector
+            );
+
+            expect(balanceAfter).to.equal(
+              balanceBefore - COLLECTION_FEE_IN_WEI - transactionFee
+            );
+          });
+
+          it("rewards the platform with 0.001 - 0.0005 which is 0.0005", async function () {
+            const {
+              contractDeployer,
+              builderCard,
+              otherAccount: builderAccountToCollect,
+              otherCollector,
+            } = await loadFixture(deployBuilderCardFixture);
+
+            let trx = await builderCard.collect(builderAccountToCollect, {
+              value: COLLECTION_FEE_IN_WEI,
+            });
+
+            await trx.wait();
+
+            // fire OtherCollector collects the same builder card
+
+            const balanceBefore = await ethers.provider.getBalance(builderCard);
+
+            trx = await builderCard
+              .connect(otherCollector)
+              .collect(builderAccountToCollect, {
+                value: COLLECTION_FEE_IN_WEI,
+              });
+
+            await trx.wait();
+
+            const balanceAfter = await ethers.provider.getBalance(builderCard);
+
+            expect(balanceAfter).to.equal(
+              balanceBefore + (COLLECTION_FEE_IN_WEI - BUILDER_REWARD_IN_WEI)
+            );
+          });
+        }
+      );
+    });
+
     it("collector balance on input builder is increased by 1", async function () {
       const {
         builderCard,
@@ -63,194 +271,28 @@ describe(CONTRACT_NAME, function () {
         builderAccount,
       } = await loadFixture(deployBuilderCardFixture);
 
-      const previousNumberOfTokens =
-        await builderCard.balanceOfCollectorForBuilder(
-          collectorAccount.address,
-          builderAccount.address
-        );
+      const builderAccountTokenId = ethers.toBigInt(builderAccount.address);
+      const previousNumberOfTokens = await builderCard[
+        "balanceOf(address,uint256)"
+      ](collectorAccount.address, builderAccountTokenId);
 
       // fire
-      const weiForValue = hre.ethers.parseEther("100");
-
       await builderCard
         .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
+        .collect(builderAccount.address, { value: COLLECTION_FEE_IN_WEI });
 
-      const numberOfTokens = await builderCard.balanceOfCollectorForBuilder(
+      const numberOfTokens = await builderCard["balanceOf(address,uint256)"](
         collectorAccount.address,
-        builderAccount.address
+        builderAccountTokenId
       );
 
       expect(numberOfTokens).to.equal(previousNumberOfTokens + BigInt("1"));
     });
+  });
 
-    it("total supply of the builder token is increased by 1", async function () {
-      const {
-        builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
-      } = await loadFixture(deployBuilderCardFixture);
-
-      const balanceOfBuilderBefore = await builderCard.balanceOfBuilder(
-        builderAccount.address
-      );
-
-      // fire
-      const weiForValue = hre.ethers.parseEther("100");
-
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-
-      const balanceOfBuilderAfter = await builderCard.balanceOfBuilder(
-        builderAccount.address
-      );
-
-      expect(balanceOfBuilderAfter).to.equal(balanceOfBuilderBefore + 1n);
-    });
-
-    it("total supply of the NFT is increased by 1", async function () {
-      const {
-        builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
-      } = await loadFixture(deployBuilderCardFixture);
-
-      const balanceOfNFTBefore = await builderCard.balance();
-
-      // fire
-      const weiForValue = hre.ethers.parseEther("100");
-
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-
-      const balanceOfNFTAfter = await builderCard.balance();
-
-      expect(balanceOfNFTAfter).to.equal(balanceOfNFTBefore + 1n);
-    });
-
-    it("increases the balance of the collector for any builder", async function () {
-      const {
-        builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
-      } = await loadFixture(deployBuilderCardFixture);
-
-      const balanceOfCollectorBefore = await builderCard.balanceOfCollector(
-        collectorAccount.address
-      );
-
-      // fire
-      const weiForValue = hre.ethers.parseEther("100");
-
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-
-      const balanceOfCollectorAfter = await builderCard.balanceOfCollector(
-        collectorAccount.address
-      );
-
-      expect(balanceOfCollectorAfter).to.equal(balanceOfCollectorBefore + 1n);
-    });
-
-    context("when collector is the first collector of the token", function () {
-      it("collector should pay 0.001ETH plus tx cost minus the first collector reward which is 0.0003ETH", async function () {
-        const {
-          builderCard,
-          otherAccount: collectorAccount,
-          builderAccount,
-        } = await loadFixture(deployBuilderCardFixture);
-
-        const collectorEthBalanceBefore = await hre.ethers.provider.getBalance(
-          collectorAccount.address
-        );
-
-        // fire
-        const weiForValue = hre.ethers.parseEther("0.001");
-
-        const tx = await builderCard
-          .connect(collectorAccount)
-          .collect(builderAccount.address, { value: weiForValue });
-        const txReceipt = await tx.wait();
-        const gasUsed = txReceipt?.gasUsed || 0n;
-        const gasPrice = txReceipt?.gasPrice || 0n;
-        const txCost = gasUsed * gasPrice;
-
-        const collectorEthBalanceAfter = await hre.ethers.provider.getBalance(
-          collectorAccount.address
-        );
-
-        const expectedCollectorEthBalanceAfter =
-          collectorEthBalanceBefore -
-          weiForValue -
-          txCost +
-          hre.ethers.parseEther("0.0003");
-
-        expect(collectorEthBalanceAfter).to.equal(
-          expectedCollectorEthBalanceAfter
-        );
-      });
-
-      it("builder gets 0.0005ETH", async function () {
-        const {
-          builderCard,
-          otherAccount: collectorAccount,
-          builderAccount,
-        } = await loadFixture(deployBuilderCardFixture);
-
-        const builderEthBalanceBefore = await hre.ethers.provider.getBalance(
-          builderAccount.address
-        );
-
-        // fire
-        const weiForValue = hre.ethers.parseEther("100");
-
-        await builderCard
-          .connect(collectorAccount)
-          .collect(builderAccount.address, { value: weiForValue });
-
-        const builderEthBalanceAfter = await hre.ethers.provider.getBalance(
-          builderAccount.address
-        );
-
-        expect(builderEthBalanceAfter).to.equal(
-          builderEthBalanceBefore + hre.ethers.parseEther("0.0005")
-        );
-      });
-
-      it("platform wallet gets 0.0002ETH", async function () {
-        const {
-          builderCard,
-          otherAccount: collectorAccount,
-          platformAccount,
-          builderAccount,
-        } = await loadFixture(deployBuilderCardFixture);
-
-        const platformEthBalanceBefore = await hre.ethers.provider.getBalance(
-          platformAccount.address
-        );
-
-        // fire
-        const weiForValue = hre.ethers.parseEther("100");
-
-        await builderCard
-          .connect(collectorAccount)
-          .collect(builderAccount.address, { value: weiForValue });
-
-        const platformEthBalanceAfter = await hre.ethers.provider.getBalance(
-          platformAccount.address
-        );
-
-        expect(platformEthBalanceAfter).to.equal(
-          platformEthBalanceBefore + hre.ethers.parseEther("0.0002")
-        );
-      });
-    });
-
-    context("when collector is not the first one", function () {
-      it("collector should pay 0.001ETH plus tx cost", async function () {
+  describe("#balanceFor - Total Supply", function () {
+    describe("a builder card - Total Supply of a Builder Card", function () {
+      it("returns the number of collections for a builder address", async function () {
         const {
           builderCard,
           otherAccount: collectorAccount,
@@ -258,39 +300,41 @@ describe(CONTRACT_NAME, function () {
           builderAccount,
         } = await loadFixture(deployBuilderCardFixture);
 
-        const collectorEthBalanceBefore = await hre.ethers.provider.getBalance(
-          collectorAccount.address
+        // collect once
+        await builderCard
+          .connect(collectorAccount)
+          .collect(builderAccount.address, { value: COLLECTION_FEE_IN_WEI });
+
+        // fire 1: check number of collections to be 1
+        let numberOfCollections = await builderCard["balanceFor(address)"](
+          builderAccount.address
         );
 
-        const weiForValue = hre.ethers.parseEther("0.001");
+        expect(numberOfCollections).to.equal(BigInt("1"));
 
-        // another collector has already collected first
+        // collect second time
         await builderCard
           .connect(otherCollector)
-          .collect(builderAccount.address, { value: weiForValue });
+          .collect(builderAccount.address, { value: COLLECTION_FEE_IN_WEI });
 
-        // fire
-        const tx = await builderCard
-          .connect(collectorAccount)
-          .collect(builderAccount.address, { value: weiForValue });
-        const txReceipt = await tx.wait();
-        const gasUsed = txReceipt?.gasUsed || 0n;
-        const gasPrice = txReceipt?.gasPrice || 0n;
-        const txCost = gasUsed * gasPrice;
-
-        const collectorEthBalanceAfter = await hre.ethers.provider.getBalance(
-          collectorAccount.address
+        // fire 2: check number of collections to be 2
+        numberOfCollections = await builderCard["balanceFor(address)"](
+          builderAccount.address
         );
 
-        const expectedCollectorEthBalanceAfter =
-          collectorEthBalanceBefore - weiForValue - txCost;
+        expect(numberOfCollections).to.equal(BigInt("2"));
 
-        expect(collectorEthBalanceAfter).to.equal(
-          expectedCollectorEthBalanceAfter
-        );
+        // check number of collections for another builder to be 0
+        const otherAccountNumberOfCollections = await builderCard[
+          "balanceFor(address)"
+        ](collectorAccount.address);
+
+        expect(otherAccountNumberOfCollections).to.equal(BigInt("0"));
       });
+    });
 
-      it("builder gets 0.0005ETH", async function () {
+    describe("all builder cards - Total Supply for all Builder Cards", function () {
+      it("returns the sum of balances for all builders together", async function () {
         const {
           builderCard,
           otherAccount: collectorAccount,
@@ -298,169 +342,268 @@ describe(CONTRACT_NAME, function () {
           builderAccount,
         } = await loadFixture(deployBuilderCardFixture);
 
-        const weiForValue = hre.ethers.parseEther("0.001");
+        const secondBuilderAccount = hre.ethers.Wallet.createRandom();
 
-        // another collector has already collected first
-        await builderCard
-          .connect(otherCollector)
-          .collect(builderAccount.address, { value: weiForValue });
-
-        // fire
-        const builderEthBalanceBefore = await hre.ethers.provider.getBalance(
-          builderAccount.address
-        );
-
+        // collect once
         await builderCard
           .connect(collectorAccount)
-          .collect(builderAccount.address, { value: weiForValue });
+          .collect(builderAccount, { value: COLLECTION_FEE_IN_WEI });
 
-        const builderEthBalanceAfter = await hre.ethers.provider.getBalance(
-          builderAccount.address
-        );
+        // fire 1: check balance to be 1
+        let balance = await builderCard["balanceFor()"]();
 
-        expect(builderEthBalanceAfter).to.equal(
-          builderEthBalanceBefore + hre.ethers.parseEther("0.0005")
-        );
+        expect(balance).to.equal(BigInt("1"));
+
+        // collect second time
+        await builderCard
+          .connect(otherCollector)
+          .collect(builderAccount, { value: COLLECTION_FEE_IN_WEI });
+
+        // fire 2: check balance to be 2
+        balance = await builderCard["balanceFor()"]();
+
+        expect(balance).to.equal(BigInt("2"));
+
+        // collect first time second builder
+        await builderCard
+          .connect(otherCollector)
+          .collect(secondBuilderAccount, { value: COLLECTION_FEE_IN_WEI });
+
+        // fire 3: check balance to be 3
+        balance = await builderCard["balanceFor()"]();
+
+        expect(balance).to.equal(BigInt("3"));
       });
+    });
+  });
 
-      it("platform wallet gets 0.0002ETH", async function () {
+  describe("#balanceOf", function () {
+    describe("collector for Builder Card", function () {
+      it("returns the number of collections a collector has for a specific builder card", async function () {
         const {
           builderCard,
           otherAccount: collectorAccount,
-          otherCollector,
           builderAccount,
-          platformAccount,
         } = await loadFixture(deployBuilderCardFixture);
 
-        const weiForValue = hre.ethers.parseEther("0.001");
+        // initially, it should be 0
 
-        // another collector has already collected first
-        await builderCard
-          .connect(otherCollector)
-          .collect(builderAccount.address, { value: weiForValue });
-
-        // fire
-        const platformEthBalanceBefore = await hre.ethers.provider.getBalance(
-          platformAccount.address
+        let balance = await builderCard["balanceOf(address, address)"](
+          collectorAccount.address,
+          builderAccount.address
         );
+
+        expect(balance).to.equal(BigInt("0"));
+
+        // we collect once
 
         await builderCard
           .connect(collectorAccount)
-          .collect(builderAccount.address, { value: weiForValue });
+          .collect(builderAccount.address, { value: COLLECTION_FEE_IN_WEI });
 
-        const platformEthBalanceAfter = await hre.ethers.provider.getBalance(
-          platformAccount.address
+        balance = await builderCard["balanceOf(address, address)"](
+          collectorAccount.address,
+          builderAccount.address
         );
 
-        expect(platformEthBalanceAfter).to.equal(
-          platformEthBalanceBefore + hre.ethers.parseEther("0.0002")
+        expect(balance).to.equal(BigInt("1"));
+
+        // we collect once more.
+        await builderCard
+          .connect(collectorAccount)
+          .collect(builderAccount.address, { value: COLLECTION_FEE_IN_WEI });
+
+        balance = await builderCard["balanceOf(address, address)"](
+          collectorAccount.address,
+          builderAccount.address
         );
+
+        // It should remain 1, because we don't allow
+        // collector to collect a Builder Card more than once.
+        expect(balance).to.equal(BigInt("1"));
+      });
+    });
+
+    describe("collector for any builder card", function () {
+      it("returns the number of builder cards an owner owns", async function () {
+        const {
+          builderCard,
+          otherAccount: collectorAccount,
+          builderAccount,
+          otherCollector,
+        } = await loadFixture(deployBuilderCardFixture);
+
+        const secondBuilderAccount = hre.ethers.Wallet.createRandom();
+
+        // +collectorAccount+ collects once
+        await builderCard
+          .connect(collectorAccount)
+          .collect(builderAccount, { value: COLLECTION_FEE_IN_WEI });
+
+        // +otherCollector+ collects once
+        await builderCard
+          .connect(otherCollector)
+          .collect(builderAccount, { value: COLLECTION_FEE_IN_WEI });
+
+        // +collectorAccount+ collects twice
+        await builderCard
+          .connect(collectorAccount)
+          .collect(secondBuilderAccount, { value: COLLECTION_FEE_IN_WEI });
+
+        // fire
+        let balance = await builderCard["balanceOf(address)"](collectorAccount);
+
+        expect(balance).to.equal(BigInt("2"));
+
+        balance = await builderCard["balanceOf(address)"](otherCollector);
+
+        expect(balance).to.equal(BigInt("1"));
+
+        // collectorAccount transfers secondBuilder card to otherCollector
+
+        const secondBuilderCardId = BigInt(secondBuilderAccount.address);
+        const value = BigInt("1");
+
+        await builderCard
+          .connect(collectorAccount)
+          ["safeTransferFrom(address,address,uint256,uint256,bytes)"](
+            collectorAccount,
+            otherCollector,
+            secondBuilderCardId,
+            value,
+            "0x"
+          );
+
+        balance = await builderCard["balanceOf(address)"](collectorAccount);
+
+        expect(balance).to.equal(BigInt("1")); // previously was 2
+
+        balance = await builderCard["balanceOf(address)"](otherCollector);
+
+        expect(balance).to.equal(BigInt("2")); // previously was 1
+
+        // otherCollector transfers secondBuilder card back to collectorAccount
+        // using the safeBatchTransferFrom
+        await builderCard
+          .connect(otherCollector)
+          ["safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"](
+            otherCollector,
+            collectorAccount,
+            [secondBuilderCardId],
+            [value],
+            "0x"
+          );
+
+        balance = await builderCard["balanceOf(address)"](otherCollector);
+
+        expect(balance).to.equal(BigInt("1")); // previously was 2
+
+        balance = await builderCard["balanceOf(address)"](collectorAccount);
+
+        expect(balance).to.equal(BigInt("2")); // previously was 1
       });
     });
   });
 
-  describe("#balanceOfCollector for builder", function () {
-    it("returns the number of mints this collector has done on given builder", async function () {
-      const {
-        builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
-        otherCollector,
-      } = await loadFixture(deployBuilderCardFixture);
+  describe("#withDraw", function () {
+    context("when called by a non-owner", function () {
+      it("reverts with appropriate error", async function () {
+        const { builderCard, otherAccount } = await loadFixture(
+          deployBuilderCardFixture
+        );
 
-      const weiForValue = hre.ethers.parseEther("0.001");
+        const amountToWithDraw = ethers.parseEther("0.0001");
 
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(otherCollector)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-
-      // fire
-      const numberOfMints = await builderCard.balanceOfCollectorForBuilder(
-        collectorAccount.address,
-        builderAccount.address
-      );
-
-      expect(numberOfMints).to.equal(2);
+        // fire
+        await expect(
+          builderCard
+            .connect(otherAccount)
+            ["withDraw(uint256)"](amountToWithDraw)
+        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+      });
     });
-  });
 
-  describe("#balanceOfCollector any builder", function () {
-    it("returns the number of mints this collector has done on any builder", async function () {
-      const {
-        builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
-        otherCollector,
-      } = await loadFixture(deployBuilderCardFixture);
+    context("when called by a the owner", function () {
+      it("withdraws part of the accumulated funds", async function () {
+        const {
+          contractDeployer,
+          builderCard,
+          otherAccount: otherCollector,
+          builderAccount,
+          otherCollector: otherBuilderAccount,
+        } = await loadFixture(deployBuilderCardFixture);
 
-      const weiForValue = hre.ethers.parseEther("0.001");
+        // let's collect so that we put some value to the contract
 
-      const secondBuilderAccount = hre.ethers.Wallet.createRandom();
+        await builderCard
+          .connect(otherCollector)
+          .collect(builderAccount, { value: COLLECTION_FEE_IN_WEI });
+        await builderCard
+          .connect(otherCollector)
+          .collect(otherBuilderAccount, { value: COLLECTION_FEE_IN_WEI });
 
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(otherCollector)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(collectorAccount)
-        .collect(secondBuilderAccount.address, { value: weiForValue });
+        const amountToWithDraw = ethers.parseEther("0.0001");
 
-      // fire
-      const numberOfMints = await builderCard.balanceOfCollector(
-        collectorAccount.address
+        const balanceBeforeForContract = await ethers.provider.getBalance(
+          builderCard
+        );
+
+        const balanceBeforeForOwner = await ethers.provider.getBalance(
+          contractDeployer
+        );
+
+        // fire
+        const trx = await builderCard["withDraw(uint256)"](amountToWithDraw);
+
+        const receipt = await trx.wait();
+
+        const transactionFee = calculateTransactionFee(receipt);
+
+        const balanceAfterForContract = await ethers.provider.getBalance(
+          builderCard
+        );
+
+        const balanceAfterForOwner = await ethers.provider.getBalance(
+          contractDeployer
+        );
+
+        expect(balanceAfterForContract).to.equal(
+          balanceBeforeForContract - amountToWithDraw
+        );
+
+        expect(balanceAfterForOwner).to.equal(
+          balanceBeforeForOwner + amountToWithDraw - transactionFee
+        );
+      });
+
+      context(
+        "when amount to withdraw exceeds smart contract balance",
+        function () {
+          it("reverts with appropriate error", async function () {
+            const {
+              contractDeployer,
+              builderCard,
+              otherAccount: otherCollector,
+              builderAccount,
+              otherCollector: otherBuilderAccount,
+            } = await loadFixture(deployBuilderCardFixture);
+
+            const balanceBeforeForContract = await ethers.provider.getBalance(
+              builderCard
+            );
+
+            const amountToWithDraw = balanceBeforeForContract + BigInt("1");
+
+            // fire
+            await expect(
+              builderCard["withDraw(uint256)"](amountToWithDraw)
+            ).to.be.revertedWithCustomError(
+              builderCard,
+              "InsufficientSmartContractBalance"
+            );
+          });
+        }
       );
-
-      expect(numberOfMints).to.equal(3);
-    });
-  });
-
-  describe("#balanceOfBuilder", function () {
-    it("returns the number of collections for the given builder", async function () {
-      const {
-        builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
-        otherCollector,
-      } = await loadFixture(deployBuilderCardFixture);
-
-      const weiForValue = hre.ethers.parseEther("0.001");
-
-      const secondBuilderAccount = hre.ethers.Wallet.createRandom();
-
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(otherCollector)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
-      await builderCard
-        .connect(collectorAccount)
-        .collect(secondBuilderAccount.address, { value: weiForValue });
-
-      // fire
-      const numberOfMintsForBuilder = await builderCard.balanceOfBuilder(
-        builderAccount.address
-      );
-      const numberOfMintsForSecondBuilder = await builderCard.balanceOfBuilder(
-        secondBuilderAccount.address
-      );
-
-      expect(numberOfMintsForBuilder).to.equal(3);
-      expect(numberOfMintsForSecondBuilder).to.equal(1);
     });
   });
 
@@ -470,29 +613,41 @@ describe(CONTRACT_NAME, function () {
         builderCard,
         otherAccount: collectorAccount,
         builderAccount,
-        platformAccount,
+        otherCollector: otherBuilderAccount,
       } = await loadFixture(deployBuilderCardFixture);
-
-      const weiForValue = hre.ethers.parseEther("0.001");
 
       await builderCard
         .connect(collectorAccount)
-        .collect(builderAccount.address, { value: weiForValue });
+        .collect(builderAccount, { value: COLLECTION_FEE_IN_WEI });
 
       // fire
-      const earningsForCollector = await builderCard.earnings(
-        collectorAccount.address
-      );
-      const earningsForBuilder = await builderCard.earnings(
-        builderAccount.address
-      );
-      const earningsForPlatform = await builderCard.earnings(
-        platformAccount.address
-      );
+      let earningsForCollector = await builderCard.earnings(collectorAccount);
+      let earningsForBuilder = await builderCard.earnings(builderAccount);
+      let earningsForPlatform = await builderCard.earnings(builderCard);
 
       expect(earningsForCollector).to.equal(hre.ethers.parseEther("0.0003"));
       expect(earningsForBuilder).to.equal(hre.ethers.parseEther("0.0005"));
       expect(earningsForPlatform).to.equal(hre.ethers.parseEther("0.0002"));
+
+      // more collections earnings are accumulated
+
+      await builderCard
+        .connect(collectorAccount)
+        .collect(otherBuilderAccount, { value: COLLECTION_FEE_IN_WEI });
+
+      earningsForCollector = await builderCard.earnings(collectorAccount);
+      earningsForBuilder = await builderCard.earnings(builderAccount);
+      earningsForPlatform = await builderCard.earnings(builderCard);
+      const earningsForOtherBuilderAccount = await builderCard.earnings(
+        otherBuilderAccount
+      );
+
+      expect(earningsForCollector).to.equal(hre.ethers.parseEther("0.0006"));
+      expect(earningsForBuilder).to.equal(hre.ethers.parseEther("0.0005"));
+      expect(earningsForPlatform).to.equal(hre.ethers.parseEther("0.0004"));
+      expect(earningsForOtherBuilderAccount).to.equal(
+        hre.ethers.parseEther("0.0005")
+      );
     });
   });
 });
