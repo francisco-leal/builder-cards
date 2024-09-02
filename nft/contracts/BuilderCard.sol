@@ -32,6 +32,8 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
         uint256 _amountRequested
     );
 
+    error RecipientAlreadyCollectorOfBuilderCard();
+
     modifier onlyOwner() {
         if (msg.sender != _contractOwner) {
             revert UnauthorizedCaller();
@@ -116,14 +118,27 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
         uint256[] memory ids,
         uint256[] memory values
     ) internal virtual override {
+        uint256 valuesLength = values.length;
+
+        // check that recipient is not already a collector
+        // -----------------------------------------------
+        if (to != address(0)) {
+            for (uint256 i = 0; i < valuesLength; i++) {
+                if (balanceOf(to, ids[i]) > 0) {
+                    revert RecipientAlreadyCollectorOfBuilderCard();
+                }
+            }
+        }
+
         super._update(from, to, ids, values);
 
         if (to == address(0) && from == address(0)) {
             return;
         }
 
+        // update balance of owners
+        // ------------------------
         uint256 sumOfValues;
-        uint256 valuesLength = values.length;
 
         for (uint256 i = 0; i < valuesLength; i++) {
             sumOfValues += values[i];

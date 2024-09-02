@@ -282,6 +282,82 @@ describe(CONTRACT_NAME, function () {
 
       expect(numberOfTokens).to.equal(previousNumberOfTokens + BigInt("1"));
     });
+
+    it("prevents transferring the same builder card to the same collector more than once", async function () {
+      // collector A collects B1
+      // collector B collects B1
+      // collector A transfers B1 to collector C
+      // collector B transfers B1 to collector C. This will revert
+      // collector A transfers B1 to collector B. This will revert
+      const {
+        builderCard,
+        accountA: collectorA,
+        accountB: b1,
+        accountC: collectorB,
+        accountD: collectorC,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      await builderCard
+        .connect(collectorA)
+        .collect(b1, { value: COLLECTION_FEE_IN_WEI });
+
+      await builderCard
+        .connect(collectorB)
+        .collect(b1, { value: COLLECTION_FEE_IN_WEI });
+
+      const b1Id = BigInt(b1.address);
+
+      await builderCard
+        .connect(collectorA)
+        ["safeTransferFrom(address,address,uint256,uint256,bytes)"](
+          collectorA,
+          collectorC,
+          b1Id,
+          BigInt("1"),
+          "0x"
+        );
+
+      await expect(
+        builderCard
+          .connect(collectorB)
+          ["safeTransferFrom(address,address,uint256,uint256,bytes)"](
+            collectorB,
+            collectorC,
+            b1Id,
+            BigInt("1"),
+            "0x"
+          )
+      ).to.be.revertedWithCustomError(
+        builderCard,
+        "RecipientAlreadyCollectorOfBuilderCard"
+      );
+
+      let balance = await builderCard["balanceOf(address,address)"](
+        collectorC,
+        b1
+      );
+
+      expect(balance).to.equal(BigInt("1"));
+
+      await expect(
+        builderCard
+          .connect(collectorA)
+          ["safeTransferFrom(address,address,uint256,uint256,bytes)"](
+            collectorA,
+            collectorB,
+            b1Id,
+            BigInt("1"),
+            "0x"
+          )
+      ).to.be.revertedWithCustomError(
+        builderCard,
+        "RecipientAlreadyCollectorOfBuilderCard"
+      );
+
+      balance = await builderCard["balanceOf(address,address)"](collectorB, b1);
+
+      expect(balance).to.equal(BigInt("1"));
+    });
   });
 
   describe("#balanceFor - Total Supply", function () {
