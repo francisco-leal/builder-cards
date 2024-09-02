@@ -15,25 +15,20 @@ const FIRST_COLLECTOR_REWARD_IN_WEI = ethers.parseEther("0.0003");
 describe(CONTRACT_NAME, function () {
   async function deployBuilderCardFixture() {
     // Contracts are deployed using the first signer/account by default
-    const [
-      contractDeployer,
-      otherAccount,
-      platformAccount,
-      otherCollector,
-      builderAccount,
-    ] = await hre.ethers.getSigners();
+    const [contractDeployer, accountA, accountB, accountC, accountD] =
+      await hre.ethers.getSigners();
 
     const BuilderCard = await hre.ethers.getContractFactory(CONTRACT_NAME);
 
     const builderCard = await BuilderCard.deploy(URI);
 
     return {
-      builderCard,
       contractDeployer,
-      otherAccount,
-      platformAccount,
-      otherCollector,
-      builderAccount,
+      builderCard,
+      accountA,
+      accountB,
+      accountC,
+      accountD,
     };
   }
 
@@ -45,7 +40,7 @@ describe(CONTRACT_NAME, function () {
           const value = ethers.parseEther("0.0");
 
           it("reverts with the error about the collection fee requirement", async function () {
-            const { builderCard, otherAccount: builderAccountToCollect } =
+            const { builderCard, accountA: builderAccountToCollect } =
               await loadFixture(deployBuilderCardFixture);
 
             // fire
@@ -68,7 +63,7 @@ describe(CONTRACT_NAME, function () {
           const value = COLLECTION_FEE_IN_WEI;
 
           it("reverts with the error about the collection fee requirement", async function () {
-            const { builderCard, otherAccount: builderAccountToCollect } =
+            const { builderCard, accountA: builderAccountToCollect } =
               await loadFixture(deployBuilderCardFixture);
 
             // fire
@@ -89,7 +84,7 @@ describe(CONTRACT_NAME, function () {
           const value = ethers.parseEther("0.0011");
 
           it("does not revert", async function () {
-            const { builderCard, otherAccount: builderAccountToCollect } =
+            const { builderCard, accountA: builderAccountToCollect } =
               await loadFixture(deployBuilderCardFixture);
 
             // fire
@@ -105,7 +100,7 @@ describe(CONTRACT_NAME, function () {
       );
 
       it("rewards the builder with 0.0005 ether", async function () {
-        const { builderCard, otherAccount: builderAccountToCollect } =
+        const { builderCard, accountA: builderAccountToCollect } =
           await loadFixture(deployBuilderCardFixture);
 
         const balanceBefore = await ethers.provider.getBalance(
@@ -131,7 +126,7 @@ describe(CONTRACT_NAME, function () {
             const {
               contractDeployer,
               builderCard,
-              otherAccount: builderAccountToCollect,
+              accountA: builderAccountToCollect,
             } = await loadFixture(deployBuilderCardFixture);
 
             const balanceBefore = await ethers.provider.getBalance(
@@ -162,7 +157,7 @@ describe(CONTRACT_NAME, function () {
           });
 
           it("rewards the platform with 0.001 - 0.005 - 0.0003 which is 0.0002", async function () {
-            const { builderCard, otherAccount: builderAccountToCollect } =
+            const { builderCard, accountA: builderAccountToCollect } =
               await loadFixture(deployBuilderCardFixture);
 
             const balanceBefore = await ethers.provider.getBalance(builderCard);
@@ -191,8 +186,8 @@ describe(CONTRACT_NAME, function () {
             const {
               contractDeployer,
               builderCard,
-              otherAccount: builderAccountToCollect,
-              otherCollector,
+              accountA: builderAccountToCollect,
+              accountB: otherCollector,
             } = await loadFixture(deployBuilderCardFixture);
 
             const balanceBefore = await ethers.provider.getBalance(
@@ -230,10 +225,9 @@ describe(CONTRACT_NAME, function () {
 
           it("rewards the platform with 0.001 - 0.0005 which is 0.0005", async function () {
             const {
-              contractDeployer,
               builderCard,
-              otherAccount: builderAccountToCollect,
-              otherCollector,
+              accountA: builderAccountToCollect,
+              accountB: otherCollector,
             } = await loadFixture(deployBuilderCardFixture);
 
             let trx = await builderCard.collect(builderAccountToCollect, {
@@ -267,8 +261,8 @@ describe(CONTRACT_NAME, function () {
     it("collector balance on input builder is increased by 1", async function () {
       const {
         builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
+        accountA: collectorAccount,
+        accountB: builderAccount,
       } = await loadFixture(deployBuilderCardFixture);
 
       const builderAccountTokenId = ethers.toBigInt(builderAccount.address);
@@ -295,9 +289,9 @@ describe(CONTRACT_NAME, function () {
       it("returns the number of collections for a builder address", async function () {
         const {
           builderCard,
-          otherAccount: collectorAccount,
-          otherCollector,
-          builderAccount,
+          accountA: collectorAccount,
+          accountB: otherCollector,
+          accountC: builderAccount,
         } = await loadFixture(deployBuilderCardFixture);
 
         // collect once
@@ -337,9 +331,9 @@ describe(CONTRACT_NAME, function () {
       it("returns the sum of balances for all builders together", async function () {
         const {
           builderCard,
-          otherAccount: collectorAccount,
-          otherCollector,
-          builderAccount,
+          accountA: collectorAccount,
+          accountB: otherCollector,
+          accountC: builderAccount,
         } = await loadFixture(deployBuilderCardFixture);
 
         const secondBuilderAccount = hre.ethers.Wallet.createRandom();
@@ -382,8 +376,8 @@ describe(CONTRACT_NAME, function () {
       it("returns the number of collections a collector has for a specific builder card", async function () {
         const {
           builderCard,
-          otherAccount: collectorAccount,
-          builderAccount,
+          accountA: collectorAccount,
+          accountB: builderAccount,
         } = await loadFixture(deployBuilderCardFixture);
 
         // initially, it should be 0
@@ -428,9 +422,9 @@ describe(CONTRACT_NAME, function () {
       it("returns the number of builder cards an owner owns", async function () {
         const {
           builderCard,
-          otherAccount: collectorAccount,
-          builderAccount,
-          otherCollector,
+          accountA: collectorAccount,
+          accountB: builderAccount,
+          accountC: otherCollector,
         } = await loadFixture(deployBuilderCardFixture);
 
         const secondBuilderAccount = hre.ethers.Wallet.createRandom();
@@ -508,7 +502,7 @@ describe(CONTRACT_NAME, function () {
   describe("#withDraw", function () {
     context("when called by a non-owner", function () {
       it("reverts with appropriate error", async function () {
-        const { builderCard, otherAccount } = await loadFixture(
+        const { builderCard, accountA: otherAccount } = await loadFixture(
           deployBuilderCardFixture
         );
 
@@ -528,9 +522,9 @@ describe(CONTRACT_NAME, function () {
         const {
           contractDeployer,
           builderCard,
-          otherAccount: otherCollector,
-          builderAccount,
-          otherCollector: otherBuilderAccount,
+          accountA: otherCollector,
+          accountB: builderAccount,
+          accountC: otherBuilderAccount,
         } = await loadFixture(deployBuilderCardFixture);
 
         // let's collect so that we put some value to the contract
@@ -583,9 +577,9 @@ describe(CONTRACT_NAME, function () {
             const {
               contractDeployer,
               builderCard,
-              otherAccount: otherCollector,
-              builderAccount,
-              otherCollector: otherBuilderAccount,
+              accountA: otherCollector,
+              accountB: builderAccount,
+              accountC: otherBuilderAccount,
             } = await loadFixture(deployBuilderCardFixture);
 
             const balanceBeforeForContract = await ethers.provider.getBalance(
@@ -611,9 +605,9 @@ describe(CONTRACT_NAME, function () {
     it("returns the earnings for each party involved", async function () {
       const {
         builderCard,
-        otherAccount: collectorAccount,
-        builderAccount,
-        otherCollector: otherBuilderAccount,
+        accountA: collectorAccount,
+        accountB: builderAccount,
+        accountC: otherBuilderAccount,
       } = await loadFixture(deployBuilderCardFixture);
 
       await builderCard
