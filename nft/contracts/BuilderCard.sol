@@ -53,8 +53,13 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
         uint256 remainingValue = msg.value;
 
         uint256 _tokenId = _builderIdFromAddress(_builder);
+
+        bool collected = false;
+
         if (balanceOf(msg.sender, _tokenId) == 0) {
             _mint(msg.sender, _tokenId, 1, "");
+
+            collected = true;
 
             // Finances
 
@@ -74,6 +79,10 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
 
         if (remainingValue > 0) {
             _accountEarnings[address(this)] += remainingValue;
+        }
+
+        if (collected) {
+            emit CardCollected(_builder, msg.sender);
         }
     }
 

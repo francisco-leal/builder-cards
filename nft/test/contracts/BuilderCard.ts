@@ -358,6 +358,22 @@ describe(CONTRACT_NAME, function () {
 
       expect(balance).to.equal(BigInt("1"));
     });
+
+    it("emits the CardCollected event", async function () {
+      const {
+        contractDeployer,
+        builderCard,
+        accountA: builderAccountToCollect,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      await expect(
+        builderCard.collect(builderAccountToCollect, {
+          value: COLLECTION_FEE_IN_WEI,
+        })
+      )
+        .to.emit(builderCard, "CardCollected")
+        .withArgs(builderAccountToCollect, contractDeployer);
+    });
   });
 
   describe("#balanceFor - Total Supply", function () {
