@@ -9,9 +9,13 @@ import "./IBuilderCard.sol";
 import "hardhat/console.sol";
 
 contract BuilderCard is ERC1155Supply, IBuilderCard {
-    uint256 public constant COLLECTION_FEE = 0.001 ether;
-    uint256 public constant BUILDER_REWARD = 0.0005 ether;
-    uint256 public constant FIRST_COLLECTOR_REWARD = 0.0003 ether;
+    struct ChargingPolicy {
+        uint256 collectionFee;
+        uint256 builderReward;
+        uint256 firstCollectorReward;
+    }
+
+    ChargingPolicy private _chargingPolicy;
 
     mapping(address _owner => uint256 _balanceOfOwner)
         private _balancesOfOwners;
@@ -22,6 +26,8 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
 
     mapping(address _account => uint256 _accountEarning)
         private _accountEarnings;
+
+    // --------------------- Errors ---------------------------------------
 
     error WrongValueForCollectionFee(uint256 _required, uint256 _provided);
 
@@ -34,6 +40,9 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
 
     error RecipientAlreadyCollectorOfBuilderCard();
 
+    error ChargingPolicyError(string _message);
+    //---------------------------------------------------------------------
+
     modifier onlyOwner() {
         if (msg.sender != _contractOwner) {
             revert UnauthorizedCaller();
@@ -41,13 +50,20 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
         _;
     }
 
-    constructor(string memory uri_) ERC1155(uri_) {
+    constructor(
+        string memory uri_,
+        ChargingPolicy memory chargingPolicy_
+    ) ERC1155(uri_) {
         _contractOwner = msg.sender;
+        _chargingPolicy = chargingPolicy_;
     }
 
     function collect(address _builder) public payable {
-        if (msg.value != COLLECTION_FEE) {
-            revert WrongValueForCollectionFee(COLLECTION_FEE, msg.value);
+        if (msg.value != _chargingPolicy.collectionFee) {
+            revert WrongValueForCollectionFee(
+                _chargingPolicy.collectionFee,
+                msg.value
+            );
         }
 
         uint256 remainingValue = msg.value;
@@ -63,17 +79,20 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
 
             // Finances
 
-            payable(_builder).transfer(BUILDER_REWARD);
-            remainingValue -= BUILDER_REWARD;
-            _accountEarnings[_builder] += BUILDER_REWARD;
+            payable(_builder).transfer(_chargingPolicy.builderReward);
+            remainingValue -= _chargingPolicy.builderReward;
+            _accountEarnings[_builder] += _chargingPolicy.builderReward;
 
             if (_firstCollectors[_tokenId] == address(0)) {
                 // this is the first collection for this token
                 _firstCollectors[_tokenId] = msg.sender;
 
-                payable(msg.sender).transfer(FIRST_COLLECTOR_REWARD);
-                remainingValue -= FIRST_COLLECTOR_REWARD;
-                _accountEarnings[msg.sender] += FIRST_COLLECTOR_REWARD;
+                payable(msg.sender).transfer(
+                    _chargingPolicy.firstCollectorReward
+                );
+                remainingValue -= _chargingPolicy.firstCollectorReward;
+                _accountEarnings[msg.sender] += _chargingPolicy
+                    .firstCollectorReward;
             }
         }
 
@@ -117,6 +136,38 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
 
     function earnings(address _account) external view returns (uint256) {
         return _accountEarnings[_account];
+    }
+
+    function setChargingPolicy(
+        uint256 collectionFee_,
+        uint256 builderReward_,
+        uint256 firstCollectorReward_
+    ) external onlyOwner {
+        if (collectionFee_ == 0) {
+            revert ChargingPolicyError("Collection fee should be positive");
+        }
+
+        if (builderReward_ + firstCollectorReward_ >= collectionFee_) {
+            revert ChargingPolicyError(
+                "Collection fee should be greater than the sum of the builder and first collector reward"
+            );
+        }
+
+        _chargingPolicy.collectionFee = collectionFee_;
+        _chargingPolicy.builderReward = builderReward_;
+        _chargingPolicy.firstCollectorReward = firstCollectorReward_;
+    }
+
+    function getCollectionFee() external view returns (uint256) {
+        return _chargingPolicy.collectionFee;
+    }
+
+    function getBuilderReward() external view returns (uint256) {
+        return _chargingPolicy.builderReward;
+    }
+
+    function getFirstCollectorReward() external view returns (uint256) {
+        return _chargingPolicy.firstCollectorReward;
     }
 
     // -------------- internal ------------------------------------

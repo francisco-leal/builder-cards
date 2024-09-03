@@ -4,6 +4,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { platform } from "os";
 import { MaxUint256 } from "ethers";
 import calculateTransactionFee from "../calculateTransactionFee";
+import { BuilderCard } from "../../typechain-types";
 
 const CONTRACT_NAME = "BuilderCard";
 const URI = "https://token-cdn-domain/{id}/json";
@@ -20,7 +21,12 @@ describe(CONTRACT_NAME, function () {
 
     const BuilderCard = await hre.ethers.getContractFactory(CONTRACT_NAME);
 
-    const builderCard = await BuilderCard.deploy(URI);
+    const chargingPolicy: BuilderCard.ChargingPolicyStruct = {
+      collectionFee: COLLECTION_FEE_IN_WEI,
+      builderReward: BUILDER_REWARD_IN_WEI,
+      firstCollectorReward: FIRST_COLLECTOR_REWARD_IN_WEI,
+    };
+    const builderCard = await BuilderCard.deploy(URI, chargingPolicy);
 
     return {
       contractDeployer,
@@ -733,6 +739,233 @@ describe(CONTRACT_NAME, function () {
       expect(earningsForPlatform).to.equal(hre.ethers.parseEther("0.0004"));
       expect(earningsForOtherBuilderAccount).to.equal(
         hre.ethers.parseEther("0.0005")
+      );
+    });
+  });
+
+  describe("#setChargingPolicy", function () {
+    context("when called by a non-contract owner", function () {
+      it("reverts with the appropriate error", async function () {
+        const { builderCard, accountA } = await loadFixture(
+          deployBuilderCardFixture
+        );
+
+        const collectionFee = ethers.parseEther("0.001");
+        const builderReward = ethers.parseEther("0.0005");
+        const firstCollectorReward = ethers.parseEther("0.0003");
+
+        await expect(
+          builderCard
+            .connect(accountA)
+            ["setChargingPolicy(uint256,uint256,uint256)"](
+              collectionFee,
+              builderReward,
+              firstCollectorReward
+            )
+        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+      });
+    });
+
+    context("when called by the contract owner", function () {
+      context("when collection fee is 0", function () {
+        it("reverts with the appropriate custom error", async function () {
+          const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+          const collectionFee = ethers.parseEther("0.0");
+          const builderReward = ethers.parseEther("0.0005");
+          const firstCollectorReward = ethers.parseEther("0.0003");
+
+          await expect(
+            builderCard["setChargingPolicy(uint256,uint256,uint256)"](
+              collectionFee,
+              builderReward,
+              firstCollectorReward
+            )
+          )
+            .to.be.revertedWithCustomError(builderCard, "ChargingPolicyError")
+            .withArgs("Collection fee should be positive");
+        });
+      });
+
+      context(
+        "when builder reward + first collector reward is equal to collection fee",
+        function () {
+          it("reverts with the appropriate custom error", async function () {
+            const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+            const collectionFee = ethers.parseEther("0.0008");
+            const builderReward = ethers.parseEther("0.0005");
+            const firstCollectorReward = ethers.parseEther("0.0003");
+
+            await expect(
+              builderCard["setChargingPolicy(uint256,uint256,uint256)"](
+                collectionFee,
+                builderReward,
+                firstCollectorReward
+              )
+            )
+              .to.be.revertedWithCustomError(builderCard, "ChargingPolicyError")
+              .withArgs(
+                "Collection fee should be greater than the sum of the builder and first collector reward"
+              );
+          });
+        }
+      );
+
+      context(
+        "when builder reward + first collector reward is greater than the collection fee",
+        function () {
+          it("reverts with the appropriate custom error", async function () {
+            const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+            const collectionFee = ethers.parseEther("0.0008");
+            const builderReward = ethers.parseEther("0.0005");
+            const firstCollectorReward = ethers.parseEther("0.00031");
+
+            await expect(
+              builderCard["setChargingPolicy(uint256,uint256,uint256)"](
+                collectionFee,
+                builderReward,
+                firstCollectorReward
+              )
+            )
+              .to.be.revertedWithCustomError(builderCard, "ChargingPolicyError")
+              .withArgs(
+                "Collection fee should be greater than the sum of the builder and first collector reward"
+              );
+          });
+        }
+      );
+
+      context(
+        "when builder reward + first collector reward is less than the collection fee",
+        function () {
+          it("sets the new charging policy values accordingly", async function () {
+            const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+            const collectionFee = ethers.parseEther("0.002");
+            const builderReward = ethers.parseEther("0.0006");
+            const firstCollectorReward = ethers.parseEther("0.0004");
+
+            await builderCard["setChargingPolicy(uint256,uint256,uint256)"](
+              collectionFee,
+              builderReward,
+              firstCollectorReward
+            );
+
+            const collectionFeeRead = await builderCard.getCollectionFee();
+
+            expect(collectionFeeRead).to.equal(collectionFee);
+
+            const builderRewardRead = await builderCard.getBuilderReward();
+
+            expect(builderRewardRead).to.equal(builderReward);
+
+            const firstCollectorRewardRead =
+              await builderCard.getFirstCollectorReward();
+
+            expect(firstCollectorRewardRead).to.equal(firstCollectorReward);
+          });
+
+          it("charges using the new values and not the default ones", async function () {
+            const {
+              contractDeployer,
+              builderCard,
+              accountA: builderAccountToCollect,
+              accountB: otherCollector,
+              accountC: otherBuilderAccountToCollect,
+            } = await loadFixture(deployBuilderCardFixture);
+
+            const balanceBefore = await ethers.provider.getBalance(
+              contractDeployer
+            );
+
+            let trx = await builderCard
+              .connect(contractDeployer)
+              .collect(builderAccountToCollect, {
+                value: COLLECTION_FEE_IN_WEI,
+              });
+
+            let receipt = await trx.wait();
+
+            let transactionFee = calculateTransactionFee(receipt);
+
+            const balanceAfter = await ethers.provider.getBalance(
+              contractDeployer
+            );
+
+            expect(balanceAfter).to.equal(
+              balanceBefore +
+                FIRST_COLLECTOR_REWARD_IN_WEI -
+                COLLECTION_FEE_IN_WEI -
+                transactionFee
+            );
+
+            // now change the charging policy
+
+            const newCollectionFee =
+              COLLECTION_FEE_IN_WEI + ethers.parseEther("0.002");
+            const newBuilderReward =
+              BUILDER_REWARD_IN_WEI + ethers.parseEther("0.0006");
+            const newFirstCollectorReward =
+              FIRST_COLLECTOR_REWARD_IN_WEI + ethers.parseEther("0.0004");
+
+            await builderCard["setChargingPolicy(uint256,uint256,uint256)"](
+              newCollectionFee,
+              newBuilderReward,
+              newFirstCollectorReward
+            );
+
+            const otherBuilderAccountBalanceBefore =
+              await ethers.provider.getBalance(otherBuilderAccountToCollect);
+
+            const platformBalanceBefore = await ethers.provider.getBalance(
+              builderCard
+            );
+
+            const otherCollectorBalanceBefore =
+              await ethers.provider.getBalance(otherCollector);
+
+            trx = await builderCard
+              .connect(otherCollector)
+              .collect(otherBuilderAccountToCollect, {
+                value: newCollectionFee,
+              });
+
+            receipt = await trx.wait();
+
+            transactionFee = calculateTransactionFee(receipt);
+
+            const otherBuilderAccountBalanceAfter =
+              await ethers.provider.getBalance(otherBuilderAccountToCollect);
+
+            const platformBalanceAfter = await ethers.provider.getBalance(
+              builderCard
+            );
+
+            const otherCollectorBalanceAfter = await ethers.provider.getBalance(
+              otherCollector
+            );
+
+            expect(otherBuilderAccountBalanceAfter).to.equal(
+              otherBuilderAccountBalanceBefore + newBuilderReward
+            );
+
+            expect(platformBalanceAfter).to.equal(
+              platformBalanceBefore +
+                newCollectionFee -
+                newBuilderReward -
+                newFirstCollectorReward
+            );
+
+            expect(otherCollectorBalanceAfter).to.equal(
+              otherCollectorBalanceBefore -
+                newCollectionFee -
+                transactionFee +
+                newFirstCollectorReward
+            );
+          });
+        }
       );
     });
   });

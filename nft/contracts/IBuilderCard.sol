@@ -88,4 +88,38 @@ interface IBuilderCard {
      * @param _account the account of which earnings are to be returned
      */
     function earnings(address _account) external view returns (uint256);
+
+    /**
+     * @notice This should only be called by the contract owner.
+     * @dev It must revert if the collection fee is 0.
+     * It must revert if the sum of the builder reward and the first collector reward
+     * is greater than or equal to the collection fee. We want the platform to get some
+     * reward.
+     * @param _collectionFee The Collection Fee that should be sent as value on collect()
+     * @param _builderReward The amount of the Collection Fee that goes to the builder
+     * @param _firstCollectorReward The amount of the Collection Fee that goes to the first collector
+     */
+    function setChargingPolicy(
+        uint256 _collectionFee,
+        uint256 _builderReward,
+        uint256 _firstCollectorReward
+    ) external;
+
+    /**
+     * @return _collectionFee
+     */
+    function getCollectionFee() external view returns (uint256 _collectionFee);
+
+    /**
+     * @return _builderReward
+     */
+    function getBuilderReward() external view returns (uint256 _builderReward);
+
+    /**
+     * @return _firstCollectorReward
+     */
+    function getFirstCollectorReward()
+        external
+        view
+        returns (uint256 _firstCollectorReward);
 }
