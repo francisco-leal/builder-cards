@@ -380,6 +380,21 @@ describe(CONTRACT_NAME, function () {
         .to.emit(builderCard, "CardCollected")
         .withArgs(builderAccountToCollect, contractDeployer);
     });
+
+    context("when contract is paused", function () {
+      it("reverts with the correct error", async function () {
+        const { builderCard, accountA: builderAccountToCollect } =
+          await loadFixture(deployBuilderCardFixture);
+
+        await builderCard.pause();
+
+        await expect(
+          builderCard.collect(builderAccountToCollect, {
+            value: COLLECTION_FEE_IN_WEI,
+          })
+        ).to.be.revertedWithCustomError(builderCard, "EnforcedPause");
+      });
+    });
   });
 
   describe("#balanceFor - Total Supply", function () {
@@ -668,6 +683,45 @@ describe(CONTRACT_NAME, function () {
         );
       });
 
+      context("when contract is paused", function () {
+        it("withdraws as before", async function () {
+          const {
+            builderCard,
+            accountA: otherCollector,
+            accountB: builderAccount,
+            accountC: otherBuilderAccount,
+          } = await loadFixture(deployBuilderCardFixture);
+
+          // let's collect so that we put some value to the contract
+
+          await builderCard
+            .connect(otherCollector)
+            .collect(builderAccount, { value: COLLECTION_FEE_IN_WEI });
+          await builderCard
+            .connect(otherCollector)
+            .collect(otherBuilderAccount, { value: COLLECTION_FEE_IN_WEI });
+
+          const amountToWithDraw = ethers.parseEther("0.0001");
+
+          const balanceBeforeForContract = await ethers.provider.getBalance(
+            builderCard
+          );
+
+          await builderCard.pause();
+
+          // fire
+          await builderCard["withDraw(uint256)"](amountToWithDraw);
+
+          const balanceAfterForContract = await ethers.provider.getBalance(
+            builderCard
+          );
+
+          expect(balanceAfterForContract).to.equal(
+            balanceBeforeForContract - amountToWithDraw
+          );
+        });
+      });
+
       context(
         "when amount to withdraw exceeds smart contract balance",
         function () {
@@ -867,6 +921,39 @@ describe(CONTRACT_NAME, function () {
             expect(firstCollectorRewardRead).to.equal(firstCollectorReward);
           });
 
+          context("when contract is paused", function () {
+            it("sets the new charging policy values accordingly", async function () {
+              const { builderCard } = await loadFixture(
+                deployBuilderCardFixture
+              );
+
+              const collectionFee = ethers.parseEther("0.002");
+              const builderReward = ethers.parseEther("0.0006");
+              const firstCollectorReward = ethers.parseEther("0.0004");
+
+              await builderCard.pause();
+
+              await builderCard["setChargingPolicy(uint256,uint256,uint256)"](
+                collectionFee,
+                builderReward,
+                firstCollectorReward
+              );
+
+              const collectionFeeRead = await builderCard.getCollectionFee();
+
+              expect(collectionFeeRead).to.equal(collectionFee);
+
+              const builderRewardRead = await builderCard.getBuilderReward();
+
+              expect(builderRewardRead).to.equal(builderReward);
+
+              const firstCollectorRewardRead =
+                await builderCard.getFirstCollectorReward();
+
+              expect(firstCollectorRewardRead).to.equal(firstCollectorReward);
+            });
+          });
+
           it("charges using the new values and not the default ones", async function () {
             const {
               contractDeployer,
@@ -967,6 +1054,231 @@ describe(CONTRACT_NAME, function () {
           });
         }
       );
+    });
+  });
+
+  describe("#pause", function () {
+    context("when called by a non-owner account", function () {
+      it("reverts with the correct error", async function () {
+        const { builderCard, accountA: nonOwnerAccount } = await loadFixture(
+          deployBuilderCardFixture
+        );
+
+        await expect(
+          builderCard.connect(nonOwnerAccount).pause()
+        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+      });
+    });
+
+    context("when called by the owner", function () {
+      it("pauses the contract", async function () {
+        const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+        await builderCard.pause();
+
+        const isPaused = await builderCard.paused();
+
+        expect(isPaused).to.be.equal(true);
+      });
+
+      context("when already paused", function () {
+        it("reverts with corresponding error", async function () {
+          const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+          await builderCard.pause();
+
+          // fire
+
+          await expect(builderCard.pause()).to.be.revertedWithCustomError(
+            builderCard,
+            "EnforcedPause"
+          );
+        });
+      });
+    });
+  });
+
+  describe("#unpause", function () {
+    context("when called by a non-owner account", function () {
+      it("reverts with the correct error", async function () {
+        const { builderCard, accountA: nonOwnerAccount } = await loadFixture(
+          deployBuilderCardFixture
+        );
+
+        await expect(
+          builderCard.connect(nonOwnerAccount).unpause()
+        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+      });
+    });
+
+    context("when called by the owner", function () {
+      it("unpauses the contract", async function () {
+        const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+        await builderCard.pause();
+
+        // fire
+        await builderCard.unpause();
+
+        const isPaused = await builderCard.paused();
+
+        expect(isPaused).to.be.equal(false);
+      });
+
+      context("when already unpaused", function () {
+        it("reverts with corresponding error", async function () {
+          const { builderCard } = await loadFixture(deployBuilderCardFixture);
+
+          await builderCard.pause();
+          await builderCard.unpause();
+
+          // fire
+          await expect(builderCard.unpause()).to.be.revertedWithCustomError(
+            builderCard,
+            "ExpectedPause"
+          );
+        });
+      });
+    });
+  });
+
+  describe("#safeTransferFrom", function () {
+    it("transfers a Builder Card from one collector to another", async function () {
+      const {
+        contractDeployer,
+        builderCard,
+        accountA: otherCollector,
+        accountB: builderAccountToCollect,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      await builderCard.collect(builderAccountToCollect, {
+        value: COLLECTION_FEE_IN_WEI,
+      });
+
+      const builderCardId = BigInt(builderAccountToCollect.address);
+
+      // fire
+      await builderCard.safeTransferFrom(
+        contractDeployer,
+        otherCollector,
+        builderCardId,
+        1n,
+        "0x"
+      );
+
+      expect(
+        await builderCard["balanceOf(address,address)"](
+          contractDeployer,
+          builderAccountToCollect
+        )
+      ).to.equal(BigInt("0"));
+
+      expect(
+        await builderCard["balanceOf(address,address)"](
+          otherCollector,
+          builderAccountToCollect
+        )
+      ).to.equal(BigInt("1"));
+    });
+
+    context("when contract is paused", function () {
+      it("reverts with the correct error", async function () {
+        const {
+          contractDeployer,
+          builderCard,
+          accountA: otherCollector,
+          accountB: builderAccountToCollect,
+        } = await loadFixture(deployBuilderCardFixture);
+
+        await builderCard.collect(builderAccountToCollect, {
+          value: COLLECTION_FEE_IN_WEI,
+        });
+
+        const builderCardId = BigInt(builderAccountToCollect.address);
+
+        await builderCard.pause();
+
+        // fire
+        await expect(
+          builderCard.safeTransferFrom(
+            contractDeployer,
+            otherCollector,
+            builderCardId,
+            1n,
+            "0x"
+          )
+        ).to.be.revertedWithCustomError(builderCard, "EnforcedPause");
+      });
+    });
+  });
+
+  describe("#safeBatchTransferFrom", function () {
+    it("transfers a Builder Card from one collector to another", async function () {
+      const {
+        contractDeployer,
+        builderCard,
+        accountA: otherCollector,
+        accountB: builderAccountToCollect,
+      } = await loadFixture(deployBuilderCardFixture);
+
+      await builderCard.collect(builderAccountToCollect, {
+        value: COLLECTION_FEE_IN_WEI,
+      });
+
+      const builderCardId = BigInt(builderAccountToCollect.address);
+
+      // fire
+      await builderCard.safeBatchTransferFrom(
+        contractDeployer,
+        otherCollector,
+        [builderCardId],
+        [1n],
+        "0x"
+      );
+
+      expect(
+        await builderCard["balanceOf(address,address)"](
+          contractDeployer,
+          builderAccountToCollect
+        )
+      ).to.equal(BigInt("0"));
+
+      expect(
+        await builderCard["balanceOf(address,address)"](
+          otherCollector,
+          builderAccountToCollect
+        )
+      ).to.equal(BigInt("1"));
+    });
+
+    context("when contract is paused", function () {
+      it("reverts with the correct error", async function () {
+        const {
+          contractDeployer,
+          builderCard,
+          accountA: otherCollector,
+          accountB: builderAccountToCollect,
+        } = await loadFixture(deployBuilderCardFixture);
+
+        await builderCard.collect(builderAccountToCollect, {
+          value: COLLECTION_FEE_IN_WEI,
+        });
+
+        const builderCardId = BigInt(builderAccountToCollect.address);
+
+        await builderCard.pause();
+
+        // fire
+        await expect(
+          builderCard.safeBatchTransferFrom(
+            contractDeployer,
+            otherCollector,
+            [builderCardId],
+            [1n],
+            "0x"
+          )
+        ).to.be.revertedWithCustomError(builderCard, "EnforcedPause");
+      });
     });
   });
 });

@@ -122,4 +122,19 @@ interface IBuilderCard {
         external
         view
         returns (uint256 _firstCollectorReward);
+
+    /**
+     * @notice Pauses the contract. Useful in emergency cases. It should only be
+     * called by the owner of the smart contract, but again, this is up to the
+     * implementation. Also, it shouldn't be called when the smart contract
+     * is already paused.
+     */
+    function pause() external;
+
+    /**
+     * @notice Unpauses a contract. It should be called only by the owner of
+     * the contract, and only if it is paused. But this is the responsibility
+     * of the implementation.
+     */
+    function unpause() external;
 }

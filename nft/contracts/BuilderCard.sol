@@ -3,12 +3,13 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "./IBuilderCard.sol";
 
 import "hardhat/console.sol";
 
-contract BuilderCard is ERC1155Supply, IBuilderCard {
+contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
     struct ChargingPolicy {
         uint256 collectionFee;
         uint256 builderReward;
@@ -58,7 +59,7 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
         _chargingPolicy = chargingPolicy_;
     }
 
-    function collect(address _builder) public payable {
+    function collect(address _builder) public payable whenNotPaused {
         if (msg.value != _chargingPolicy.collectionFee) {
             revert WrongValueForCollectionFee(
                 _chargingPolicy.collectionFee,
@@ -170,6 +171,14 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
         return _chargingPolicy.firstCollectorReward;
     }
 
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     // -------------- internal ------------------------------------
 
     function _update(
@@ -177,7 +186,7 @@ contract BuilderCard is ERC1155Supply, IBuilderCard {
         address to,
         uint256[] memory ids,
         uint256[] memory values
-    ) internal virtual override {
+    ) internal virtual override whenNotPaused {
         uint256 valuesLength = values.length;
 
         // check that recipient is not already a collector
