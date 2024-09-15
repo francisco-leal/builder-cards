@@ -58,22 +58,22 @@ interface IBuilderCard {
      * @notice It returns the number of times a collector has collected a
      * BuilderCard. It wraps the +balanceOf+ ERC-1155 standard function that
      * takes as input the token as +uint256+.
-     * @param _owner the address that owns the Builder Cards, i.e. the tokens
+     * @param _collector the address that owns the Builder Cards, i.e. the tokens
      * @param _builder the address representing the Builder Card
      */
     function balanceOf(
-        address _owner,
+        address _collector,
         address _builder
     ) external view returns (uint256);
 
     /**
      * @notice It returns the number of Builder Cards a specific collector
      * has collected so far.
-     * @param _owner the address whose collections we want to count
+     * @param _collector the address whose collections we want to count
      * @return 0 or more, depending on how many Builder Cards the specific
      * owner/collector has collected.
      */
-    function balanceOf(address _owner) external view returns (uint256);
+    function balanceOf(address _collector) external view returns (uint256);
 
     /**
      * @notice It withdraws an amount of eth from the smart contract and
