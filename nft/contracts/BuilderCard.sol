@@ -4,12 +4,13 @@ pragma solidity 0.8.24;
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./IBuilderCard.sol";
 
 import "hardhat/console.sol";
 
-contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
+contract BuilderCard is ERC1155Supply, Pausable, Ownable, IBuilderCard {
     struct ChargingPolicy {
         uint256 collectionFee;
         uint256 builderReward;
@@ -18,12 +19,10 @@ contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
 
     ChargingPolicy private _chargingPolicy;
 
-    mapping(address _owner => uint256 _balanceOfOwner)
-        private _balancesOfOwners;
+    mapping(address _collector => uint256 _balanceOfCollector)
+        private _balancesOfCollectors;
 
     mapping(uint256 _id => address _firstCollector) private _firstCollectors;
-
-    address private _contractOwner;
 
     mapping(address _account => uint256 _accountEarning)
         private _accountEarnings;
@@ -42,20 +41,14 @@ contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
     error RecipientAlreadyCollectorOfBuilderCard();
 
     error ChargingPolicyError(string _message);
-    //---------------------------------------------------------------------
 
-    modifier onlyOwner() {
-        if (msg.sender != _contractOwner) {
-            revert UnauthorizedCaller();
-        }
-        _;
-    }
+    //---------------------------------------------------------------------
 
     constructor(
         string memory uri_,
-        ChargingPolicy memory chargingPolicy_
-    ) ERC1155(uri_) {
-        _contractOwner = msg.sender;
+        ChargingPolicy memory chargingPolicy_,
+        address initialOwner_
+    ) ERC1155(uri_) Ownable(initialOwner_) {
         _chargingPolicy = chargingPolicy_;
     }
 
@@ -116,15 +109,15 @@ contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
     }
 
     function balanceOf(
-        address _owner,
+        address _collector,
         address _builder
     ) external view returns (uint256) {
         uint256 tokenId = _builderIdFromAddress(_builder);
-        return balanceOf(_owner, tokenId);
+        return balanceOf(_collector, tokenId);
     }
 
-    function balanceOf(address _owner) external view returns (uint256) {
-        return _balancesOfOwners[_owner];
+    function balanceOf(address _collector) external view returns (uint256) {
+        return _balancesOfCollectors[_collector];
     }
 
     function withDraw(uint256 _amount) external onlyOwner {
@@ -132,7 +125,7 @@ contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
         if (_contractBalance < _amount) {
             revert InsufficientSmartContractBalance(_contractBalance, _amount);
         }
-        payable(_contractOwner).transfer(_amount);
+        payable(owner()).transfer(_amount);
     }
 
     function earnings(address _account) external view returns (uint256) {
@@ -205,8 +198,8 @@ contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
             return;
         }
 
-        // update balance of owners
-        // ------------------------
+        // update balance of collectors
+        // -----------------------------
         uint256 sumOfValues;
 
         for (uint256 i = 0; i < valuesLength; i++) {
@@ -214,11 +207,11 @@ contract BuilderCard is ERC1155Supply, Pausable, IBuilderCard {
         }
 
         if (to != address(0)) {
-            _balancesOfOwners[to] += sumOfValues;
+            _balancesOfCollectors[to] += sumOfValues;
         }
 
         if (from != address(0)) {
-            _balancesOfOwners[from] -= sumOfValues;
+            _balancesOfCollectors[from] -= sumOfValues;
         }
     }
 

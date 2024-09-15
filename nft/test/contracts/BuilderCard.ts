@@ -1,8 +1,6 @@
 import hre, { ethers } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { platform } from "os";
-import { MaxUint256 } from "ethers";
 import calculateTransactionFee from "../calculateTransactionFee";
 import { BuilderCard } from "../../typechain-types";
 
@@ -26,7 +24,11 @@ describe(CONTRACT_NAME, function () {
       builderReward: BUILDER_REWARD_IN_WEI,
       firstCollectorReward: FIRST_COLLECTOR_REWARD_IN_WEI,
     };
-    const builderCard = await BuilderCard.deploy(URI, chargingPolicy);
+    const builderCard = await BuilderCard.deploy(
+      URI,
+      chargingPolicy,
+      contractDeployer
+    );
 
     return {
       contractDeployer,
@@ -532,7 +534,7 @@ describe(CONTRACT_NAME, function () {
     });
 
     describe("collector for any builder card", function () {
-      it("returns the number of builder cards an owner owns", async function () {
+      it("returns the number of builder cards a collector owns", async function () {
         const {
           builderCard,
           accountA: collectorAccount,
@@ -626,7 +628,10 @@ describe(CONTRACT_NAME, function () {
           builderCard
             .connect(otherAccount)
             ["withDraw(uint256)"](amountToWithDraw)
-        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+        ).to.be.revertedWithCustomError(
+          builderCard,
+          "OwnableUnauthorizedAccount"
+        );
       });
     });
 
@@ -816,7 +821,10 @@ describe(CONTRACT_NAME, function () {
               builderReward,
               firstCollectorReward
             )
-        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+        ).to.be.revertedWithCustomError(
+          builderCard,
+          "OwnableUnauthorizedAccount"
+        );
       });
     });
 
@@ -1066,7 +1074,10 @@ describe(CONTRACT_NAME, function () {
 
         await expect(
           builderCard.connect(nonOwnerAccount).pause()
-        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+        ).to.be.revertedWithCustomError(
+          builderCard,
+          "OwnableUnauthorizedAccount"
+        );
       });
     });
 
@@ -1107,7 +1118,10 @@ describe(CONTRACT_NAME, function () {
 
         await expect(
           builderCard.connect(nonOwnerAccount).unpause()
-        ).to.be.revertedWithCustomError(builderCard, "UnauthorizedCaller");
+        ).to.be.revertedWithCustomError(
+          builderCard,
+          "OwnableUnauthorizedAccount"
+        );
       });
     });
 
@@ -1278,6 +1292,39 @@ describe(CONTRACT_NAME, function () {
             "0x"
           )
         ).to.be.revertedWithCustomError(builderCard, "EnforcedPause");
+      });
+    });
+  });
+
+  describe("#transferOwnership", function () {
+    context("when not called by the current owner", function () {
+      it("reverts with custom error OwnableUnauthorizedAccount", async function () {
+        const {
+          builderCard,
+          accountA: newOwner,
+          accountB: nonOwner,
+        } = await loadFixture(deployBuilderCardFixture);
+
+        await expect(
+          builderCard.connect(nonOwner).transferOwnership(newOwner)
+        ).to.be.revertedWithCustomError(
+          builderCard,
+          "OwnableUnauthorizedAccount"
+        );
+      });
+    });
+
+    context("when called by the current owner", function () {
+      it("transfers the ownership", async function () {
+        const { builderCard, accountA: newOwner } = await loadFixture(
+          deployBuilderCardFixture
+        );
+
+        await builderCard.transferOwnership(newOwner);
+
+        const checkNewOwner = await builderCard.owner();
+
+        expect(checkNewOwner).to.equal(newOwner);
       });
     });
   });
