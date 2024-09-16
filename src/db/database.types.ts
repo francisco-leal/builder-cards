@@ -4,106 +4,103 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
 export type Database = {
   public: {
     Tables: {
       cards: {
         Row: {
-          created_at: string;
-          hash: string;
-          holders: number;
-          id: string;
-          token_id: number;
-          total_supply: number;
-        };
+          address: string
+          created_at: string | null
+          hash: string
+          holders: number | null
+          id: number
+          total_supply: number | null
+        }
         Insert: {
-          created_at?: string;
-          hash: string;
-          holders?: number;
-          id?: string;
-          token_id: number;
-          total_supply?: number;
-        };
+          address: string
+          created_at?: string | null
+          hash: string
+          holders?: number | null
+          id?: never
+          total_supply?: number | null
+        }
         Update: {
-          created_at?: string;
-          hash?: string;
-          holders?: number;
-          id?: string;
-          token_id?: number;
-          total_supply?: number;
-        };
-        Relationships: [];
-      };
+          address?: string
+          created_at?: string | null
+          hash?: string
+          holders?: number | null
+          id?: never
+          total_supply?: number | null
+        }
+        Relationships: []
+      }
       collectors: {
         Row: {
-          balance: number;
-          collector: string;
-          created_at: string;
-          id: number;
-          token_id: number;
-        };
+          address: string
+          balance: number
+          collector: string
+          created_at: string | null
+          id: number
+        }
         Insert: {
-          balance?: number;
-          collector: string;
-          created_at?: string;
-          id?: number;
-          token_id: number;
-        };
+          address: string
+          balance: number
+          collector: string
+          created_at?: string | null
+          id?: never
+        }
         Update: {
-          balance?: number;
-          collector?: string;
-          created_at?: string;
-          id?: number;
-          token_id?: number;
-        };
-        Relationships: [];
-      };
+          address?: string
+          balance?: number
+          collector?: string
+          created_at?: string | null
+          id?: never
+        }
+        Relationships: []
+      }
       collects: {
         Row: {
-          collector: string;
-          created_at: string;
-          hash: string;
-          id: number;
-          token_id: number;
-        };
+          address: string
+          collector: string
+          created_at: string | null
+          hash: string
+          id: number
+        }
         Insert: {
-          collector: string;
-          created_at?: string;
-          hash: string;
-          id?: number;
-          token_id: number;
-        };
+          address: string
+          collector: string
+          created_at?: string | null
+          hash: string
+          id?: never
+        }
         Update: {
-          collector?: string;
-          created_at?: string;
-          hash?: string;
-          id?: number;
-          token_id?: number;
-        };
-        Relationships: [];
-      };
-    };
+          address?: string
+          collector?: string
+          created_at?: string | null
+          hash?: string
+          id?: never
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      update_all_stats: {
-        Args: Record<PropertyKey, never>;
-        Returns: undefined;
-      };
-    };
+      [_ in never]: never
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type PublicSchema = Database[Extract<keyof Database, "public">];
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   PublicTableNameOrOptions extends
@@ -112,23 +109,23 @@ export type Tables<
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
         Database[PublicTableNameOrOptions["schema"]]["Views"])
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
       Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+      Row: infer R
     }
     ? R
     : never
   : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-      PublicSchema["Views"])
-  ? (PublicSchema["Tables"] &
-      PublicSchema["Views"])[PublicTableNameOrOptions] extends {
-      Row: infer R;
-    }
-    ? R
+        PublicSchema["Views"])
+    ? (PublicSchema["Tables"] &
+        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never;
 
 export type TablesInsert<
   PublicTableNameOrOptions extends
@@ -136,20 +133,20 @@ export type TablesInsert<
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+      Insert: infer I
     }
     ? I
     : never
   : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-      Insert: infer I;
-    }
-    ? I
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never;
 
 export type TablesUpdate<
   PublicTableNameOrOptions extends
@@ -157,20 +154,20 @@ export type TablesUpdate<
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+      Update: infer U
     }
     ? U
     : never
   : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-      Update: infer U;
-    }
-    ? U
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never;
 
 export type Enums<
   PublicEnumNameOrOptions extends
@@ -178,9 +175,9 @@ export type Enums<
     | { schema: keyof Database },
   EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
-    : never = never
+    : never = never,
 > = PublicEnumNameOrOptions extends { schema: keyof Database }
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-  ? PublicSchema["Enums"][PublicEnumNameOrOptions]
-  : never;
+    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+    : never
