@@ -15,7 +15,7 @@ const PRIVATE_KEY = vars.get(
   "PRIVATE_KEY",
   "0x0000000000000000000000000000000000000000000000000000000000000000"
 );
-const BASE_API_KEY = vars.get("BASE_API_KEY", "");
+const BASESCAN_API_KEY = vars.get("BASESCAN_API_KEY", "");
 
 const config: HardhatUserConfig = {
   solidity: "0.8.24",
@@ -26,13 +26,13 @@ const config: HardhatUserConfig = {
   },
   networks: {
     baseSepolia: {
-      url: `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${BASE_SEPOLIA_API_KEY}`,
+      url: `https://base-sepolia.g.alchemy.com/v2/${BASE_SEPOLIA_API_KEY}`,
       accounts: [PRIVATE_KEY],
     },
   },
   etherscan: {
     apiKey: {
-      baseSepolia: BASE_API_KEY,
+      baseSepolia: BASESCAN_API_KEY,
     },
     customChains: [
       {
