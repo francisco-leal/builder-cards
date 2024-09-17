@@ -2,7 +2,6 @@ import { getPassportById } from "@/external/talent_passport";
 import { Box } from "@mui/joy";
 import { Activity, BuilderCard, BuilderDetails } from "@/components";
 import { getBuilderActivities } from "@/functions/activity";
-import { getBuilderCard } from "@/functions/builder";
 import { getTopCollectors } from "@/functions/top-collectors";
 import { balanceFor } from "@/functions/onchain";
 
@@ -13,7 +12,6 @@ export default async function BuilderPage({
 }) {
   const { passport } = await getPassportById(params.id);
   const { activities } = await getBuilderActivities(params.id);
-  const { card } = await getBuilderCard(params.id);
   const { collectors } = await getTopCollectors(params.id);
   const totalSupply = await balanceFor(params.id);
 
