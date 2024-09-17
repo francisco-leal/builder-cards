@@ -54,6 +54,13 @@ export async function POST(request: NextRequest) {
       address: _builder.toLowerCase(),
     });
 
+    // insert into collectors
+    await supabase.from("collectors").insert({
+      balance: 1,
+      collector: _collector.toLowerCase(),
+      address: _builder.toLowerCase(),
+    });
+
     revalidateTag(`activities_${_builder}`);
 
     // create supabase rpc call to update the number of holders && totalSupply of the card or use onchain data?
