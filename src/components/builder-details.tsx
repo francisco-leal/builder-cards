@@ -15,6 +15,7 @@ import {
   useSwitchChain,
   useChainId,
   useAccount,
+  useReadContract,
 } from "wagmi";
 import { baseSepolia } from "viem/chains";
 import BuilderCardABI from "@/lib/abi/BuilderCard.json";
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 import { BUILDER_CARD_CONTRACT, BLOCKSCOUT_URL } from "@/constants";
 import { parseEther } from "viem";
 import { Collectors } from "@/functions/top-collectors";
+import { balanceFor } from "@/functions/onchain";
 
 export const BuilderDetails = ({
   displayName,
@@ -46,6 +48,7 @@ export const BuilderDetails = ({
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const { address } = useAccount();
+  const [currentTotalSupply, setCurrentTotalSupply] = useState(totalSupply);
 
   useEffect(() => {
     if (isSuccess || isError) {
@@ -60,6 +63,12 @@ export const BuilderDetails = ({
           method: "POST",
           body: JSON.stringify({ hash, wallet }),
         });
+
+        (async () => {
+          const newBalance = await balanceFor(wallet);
+
+          setCurrentTotalSupply(newBalance);
+        })();
       } else {
         toast.error("Transaction failed");
       }
@@ -189,8 +198,8 @@ export const BuilderDetails = ({
           textColor="common.black"
           textAlign={"center"}
         >
-          {(totalSupply ?? 0) > 0
-            ? `Collected x${totalSupply}`
+          {(currentTotalSupply ?? 0) > 0
+            ? `Collected x${currentTotalSupply}`
             : "Be the first to collect!"}
         </Typography>
       </Box>
