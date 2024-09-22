@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     revalidateTag(`activities_${_builder}`);
 
     // create supabase rpc call to update the number of holders && totalSupply of the card or use onchain data?
-    await supabase.rpc("update_all_stats");
+    // await supabase.rpc("update_all_stats");
 
     revalidateTag(`cards_${_builder}`);
 
