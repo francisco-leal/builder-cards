@@ -33,7 +33,13 @@ export const searchPassports = async (
   return unstable_cache(
     async (query: string, currentPage: number) => {
       try {
-        console.debug("Will call fetch to get passports");
+        console.debug(
+          "Will call fetch to get passports",
+          "TALENT_PASSPORT_URL",
+          TALENT_PASSPORT_URL,
+          "TALENT_PROTOCOL_KEY",
+          TALENT_PROTOCOL_KEY
+        );
 
         const request = await fetch(
           `${TALENT_PASSPORT_URL}/passports?keyword=${query}&page=${currentPage}`,
@@ -44,6 +50,9 @@ export const searchPassports = async (
             },
           }
         );
+
+        console.debug("After fetch call to get passports");
+
         return await request.json();
       } catch (e) {
         console.log(e);
