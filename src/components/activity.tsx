@@ -69,7 +69,8 @@ export const Activity = ({ activities }: { activities: Collects[] }) => {
                 }}
               >
                 <Skeleton loading={!i.hash}>
-                  {dateToDifferenceFromNow(i.created_at)} <OpenInNew />
+                  {i && i.created_at && dateToDifferenceFromNow(i.created_at)}{" "}
+                  <OpenInNew />
                 </Skeleton>
               </Typography>
             </Link>
