@@ -4,6 +4,7 @@ import { baseSepolia } from "viem/chains";
 import { supabase } from "@/db";
 import { revalidateTag, revalidatePath } from "next/cache";
 import { BUILDER_CARD_CONTRACT } from "@/constants";
+import createTestnetPublicClient from "@/utils/createTestnetPublicClient";
 
 type RequestBody = {
   hash: `0x${string}`;
@@ -13,10 +14,7 @@ type RequestBody = {
 export async function POST(request: NextRequest) {
   const { hash, wallet } = (await request.json()) as RequestBody;
 
-  const client = createPublicClient({
-    chain: baseSepolia,
-    transport: http(),
-  });
+  const client = createTestnetPublicClient();
 
   const transaction = await client.getTransaction({ hash });
 
