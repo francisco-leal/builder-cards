@@ -1,18 +1,16 @@
 "use server";
 import { supabase } from "@/db";
-import { addressToId } from "./onchain";
 import { Database } from "@/db/database.types";
+import { IsAddressEqualReturnType } from "viem";
 
 type Tables = Database["public"]["Tables"];
 export type Collectors = Tables["collectors"]["Row"];
 
-export const getTopCollectors = async (id: `0x${string}`) => {
-  const tokenId = await addressToId(id);
-
+export const getTopCollectors = async (address: `0x${string}`) => {
   const { data, error } = await supabase
     .from("collectors")
     .select("*")
-    .eq("token_id", tokenId)
+    .like("address", address.toLowerCase())
     .order("balance", { ascending: false })
     .limit(3);
 

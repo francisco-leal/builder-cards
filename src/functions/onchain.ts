@@ -1,25 +1,36 @@
 "use server";
-import { createPublicClient, http, parseAbiItem, getContract } from "viem";
-import { baseSepolia } from "viem/chains";
+import { getContract } from "viem";
 import BuilderCardABI from "@/lib/abi/BuilderCard.json";
+import { BUILDER_CARD_CONTRACT } from "@/constants";
+import createTestnetPublicClient from "@/utils/createTestnetPublicClient";
 
-const baseRPC = process.env.BASE_RPC as string;
-const contractAddress = process.env
-  .NEXT_PUBLIC_BUILDER_CARD_CONTRACT as `0x${string}`;
+export const balanceFor = async (address: `0x${string}`) => {
+  const client = createTestnetPublicClient();
 
-export const addressToId = async (address: `0x${string}`) => {
-  const client = createPublicClient({
-    chain: baseSepolia,
-    transport: http(baseRPC),
-  });
-
-  const contract = getContract({
-    address: contractAddress,
+  const balance: bigint = (await client.readContract({
+    address: BUILDER_CARD_CONTRACT,
     abi: BuilderCardABI,
-    client,
-  });
+    functionName: "balanceFor",
+    args: [address],
+  })) as bigint;
 
-  const id = await contract.read.builderIds([address]);
+  console.debug(`balanceFor(${address}) = ${balance.toString()}`);
 
-  return Number(id);
+  return Number(balance);
+};
+
+export const balanceOfCollectorForBuilder = async (
+  collector: `0x${string}`,
+  builder: `0x${string}`
+) => {
+  const client = createTestnetPublicClient();
+
+  const balance: bigint = (await client.readContract({
+    address: BUILDER_CARD_CONTRACT,
+    abi: BuilderCardABI,
+    functionName: "balanceOf",
+    args: [collector, builder],
+  })) as bigint;
+
+  return Number(balance);
 };

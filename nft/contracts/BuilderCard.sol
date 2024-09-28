@@ -1,107 +1,223 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract BuilderCard is ERC1155 {
-    address _platformAddress;
+import "./IBuilderCard.sol";
 
-    mapping(uint256 _id => uint256 _balanceOfId) _balancesOfIds;
+import "hardhat/console.sol";
 
-    mapping(address _collector => uint256 _balanceOfCollector) _balancesOfCollectors;
-
-    mapping(address _builder => uint256 _id) public builderIds;
-
-    mapping(address _beneficiary => uint256 _earning) _earnings;
-
-    uint256 _nftBalance;
-
-    uint256 _idSequence;
-
-    uint256 constant TOTAL_COLLECT_FEE = 0.001 ether;
-    uint256 constant BUILDER_REWARD = 0.0005 ether;
-    uint256 constant FIRST_COLLECTOR_REWARD = 0.0003 ether;
-    uint256 constant PLATFORM_FEE = 0.0002 ether;
-
-    constructor(string memory uri_, address _pa) ERC1155(uri_) {
-        _platformAddress = _pa;
+contract BuilderCard is ERC1155Supply, Pausable, Ownable, IBuilderCard {
+    struct ChargingPolicy {
+        uint256 collectionFee;
+        uint256 builderReward;
+        uint256 firstCollectorReward;
     }
 
-    function uri(uint256 _id) public view override returns (string memory) {
-        return
-            string.concat(super.uri(_id), "/", Strings.toString(_id), ".json");
+    ChargingPolicy private _chargingPolicy;
+
+    mapping(address _collector => uint256 _balanceOfCollector)
+        private _balancesOfCollectors;
+
+    mapping(uint256 _id => address _firstCollector) private _firstCollectors;
+
+    mapping(address _account => uint256 _accountEarning)
+        private _accountEarnings;
+
+    // --------------------- Errors ---------------------------------------
+
+    error WrongValueForCollectionFee(uint256 _required, uint256 _provided);
+
+    error UnauthorizedCaller();
+
+    error InsufficientSmartContractBalance(
+        uint256 _balance,
+        uint256 _amountRequested
+    );
+
+    error RecipientAlreadyCollectorOfBuilderCard();
+
+    error ChargingPolicyError(string _message);
+
+    //---------------------------------------------------------------------
+
+    constructor(
+        string memory uri_,
+        ChargingPolicy memory chargingPolicy_,
+        address initialOwner_
+    ) ERC1155(uri_) Ownable(initialOwner_) {
+        _chargingPolicy = chargingPolicy_;
     }
 
-    function collect(address _builder) public payable {
-        require(
-            msg.value >= TOTAL_COLLECT_FEE,
-            "not enough value send in the transaction"
-        );
-
-        uint256 _id = builderIds[_builder];
-        bool firstMint = false;
-
-        if (_id == 0) {
-            firstMint = true;
-            _idSequence += 1;
-            _id = _idSequence;
-            builderIds[_builder] = _id;
+    function collect(address _builder) public payable whenNotPaused {
+        if (msg.value != _chargingPolicy.collectionFee) {
+            revert WrongValueForCollectionFee(
+                _chargingPolicy.collectionFee,
+                msg.value
+            );
         }
 
-        _mint(msg.sender, _id, 1, "");
+        uint256 remainingValue = msg.value;
 
-        _balancesOfIds[_id] += 1;
+        uint256 _tokenId = _builderIdFromAddress(_builder);
 
-        _nftBalance += 1;
+        bool collected = false;
 
-        _balancesOfCollectors[msg.sender] += 1;
+        if (balanceOf(msg.sender, _tokenId) == 0) {
+            _mint(msg.sender, _tokenId, 1, "");
 
-        // Financial part starts here:
-        //----------------------------
-        if (firstMint) {
-            payable(msg.sender).transfer(FIRST_COLLECTOR_REWARD);
-            _earnings[msg.sender] += FIRST_COLLECTOR_REWARD;
+            collected = true;
+
+            // Finances
+
+            payable(_builder).transfer(_chargingPolicy.builderReward);
+            remainingValue -= _chargingPolicy.builderReward;
+            _accountEarnings[_builder] += _chargingPolicy.builderReward;
+
+            if (_firstCollectors[_tokenId] == address(0)) {
+                // this is the first collection for this token
+                _firstCollectors[_tokenId] = msg.sender;
+
+                payable(msg.sender).transfer(
+                    _chargingPolicy.firstCollectorReward
+                );
+                remainingValue -= _chargingPolicy.firstCollectorReward;
+                _accountEarnings[msg.sender] += _chargingPolicy
+                    .firstCollectorReward;
+            }
         }
 
-        payable(_builder).transfer(BUILDER_REWARD);
-        _earnings[_builder] += BUILDER_REWARD;
+        if (remainingValue > 0) {
+            _accountEarnings[address(this)] += remainingValue;
+        }
 
-        uint256 _platformEarning = TOTAL_COLLECT_FEE -
-            FIRST_COLLECTOR_REWARD -
-            BUILDER_REWARD;
-        payable(_platformAddress).transfer(_platformEarning);
-        _earnings[_platformAddress] += _platformEarning;
+        if (collected) {
+            emit CardCollected(_builder, msg.sender);
+        }
     }
 
-    function balanceOfBuilder(
-        address _builder
-    ) public view returns (uint256 _balance) {
-        uint256 _id = builderIds[_builder];
-
-        _balance = _balancesOfIds[_id];
+    function balanceFor(address _builder) external view returns (uint256) {
+        uint256 _tokenId = _builderIdFromAddress(_builder);
+        return totalSupply(_tokenId);
     }
 
-    function balance() public view returns (uint256 _nftBln) {
-        _nftBln = _nftBalance;
+    function balanceFor() external view returns (uint256) {
+        return totalSupply();
     }
 
-    function balanceOfCollectorForBuilder(
+    function balanceOf(
         address _collector,
         address _builder
-    ) public view returns (uint256) {
-        uint256 _id = builderIds[_builder];
-
-        return super.balanceOf(_collector, _id);
+    ) external view returns (uint256) {
+        uint256 tokenId = _builderIdFromAddress(_builder);
+        return balanceOf(_collector, tokenId);
     }
 
-    function balanceOfCollector(
-        address _collector
-    ) public view returns (uint256) {
+    function balanceOf(address _collector) external view returns (uint256) {
         return _balancesOfCollectors[_collector];
     }
 
-    function earnings(address _beneficiary) public view returns (uint256) {
-        return _earnings[_beneficiary];
+    function withDraw(uint256 _amount) external onlyOwner {
+        uint256 _contractBalance = address(this).balance;
+        if (_contractBalance < _amount) {
+            revert InsufficientSmartContractBalance(_contractBalance, _amount);
+        }
+        payable(owner()).transfer(_amount);
+    }
+
+    function earnings(address _account) external view returns (uint256) {
+        return _accountEarnings[_account];
+    }
+
+    function setChargingPolicy(
+        uint256 collectionFee_,
+        uint256 builderReward_,
+        uint256 firstCollectorReward_
+    ) external onlyOwner {
+        if (collectionFee_ == 0) {
+            revert ChargingPolicyError("Collection fee should be positive");
+        }
+
+        if (builderReward_ + firstCollectorReward_ >= collectionFee_) {
+            revert ChargingPolicyError(
+                "Collection fee should be greater than the sum of the builder and first collector reward"
+            );
+        }
+
+        _chargingPolicy.collectionFee = collectionFee_;
+        _chargingPolicy.builderReward = builderReward_;
+        _chargingPolicy.firstCollectorReward = firstCollectorReward_;
+    }
+
+    function getCollectionFee() external view returns (uint256) {
+        return _chargingPolicy.collectionFee;
+    }
+
+    function getBuilderReward() external view returns (uint256) {
+        return _chargingPolicy.builderReward;
+    }
+
+    function getFirstCollectorReward() external view returns (uint256) {
+        return _chargingPolicy.firstCollectorReward;
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    // -------------- internal ------------------------------------
+
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory values
+    ) internal virtual override whenNotPaused {
+        uint256 valuesLength = values.length;
+
+        // check that recipient is not already a collector
+        // -----------------------------------------------
+        if (to != address(0)) {
+            for (uint256 i = 0; i < valuesLength; i++) {
+                if (balanceOf(to, ids[i]) > 0) {
+                    revert RecipientAlreadyCollectorOfBuilderCard();
+                }
+            }
+        }
+
+        super._update(from, to, ids, values);
+
+        if (to == address(0) && from == address(0)) {
+            return;
+        }
+
+        // update balance of collectors
+        // -----------------------------
+        uint256 sumOfValues;
+
+        for (uint256 i = 0; i < valuesLength; i++) {
+            sumOfValues += values[i];
+        }
+
+        if (to != address(0)) {
+            _balancesOfCollectors[to] += sumOfValues;
+        }
+
+        if (from != address(0)) {
+            _balancesOfCollectors[from] -= sumOfValues;
+        }
+    }
+
+    function _builderIdFromAddress(
+        address _builder
+    ) internal pure returns (uint256) {
+        return uint256(uint160(_builder));
     }
 }

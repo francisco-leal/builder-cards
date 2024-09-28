@@ -15,6 +15,7 @@ import {
   useSwitchChain,
   useChainId,
   useAccount,
+  useReadContract,
 } from "wagmi";
 import { baseSepolia } from "viem/chains";
 import BuilderCardABI from "@/lib/abi/BuilderCard.json";
@@ -23,6 +24,17 @@ import { toast } from "sonner";
 import { BUILDER_CARD_CONTRACT, BLOCKSCOUT_URL } from "@/constants";
 import { parseEther } from "viem";
 import { Collectors } from "@/functions/top-collectors";
+import { balanceFor, balanceOfCollectorForBuilder } from "@/functions/onchain";
+
+/**
+ * This is telling the app whether collector has collected this card or not.
+ */
+enum CheckingCollectionStatus {
+  CHECKING = "CHECKING",
+  NOT_COLLECTED = "NOT_COLLECTED",
+  COLLECTED = "COLLECTED",
+  CANNOT_CHECK = "CANNOT_CHECK",
+}
 
 export const BuilderDetails = ({
   displayName,
@@ -46,6 +58,13 @@ export const BuilderDetails = ({
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const { address } = useAccount();
+  const [currentTotalSupply, setCurrentTotalSupply] = useState(totalSupply);
+  const [collectionStatus, setCollectionStatus] =
+    useState<CheckingCollectionStatus>(
+      address
+        ? CheckingCollectionStatus.CHECKING
+        : CheckingCollectionStatus.CANNOT_CHECK
+    );
 
   useEffect(() => {
     if (isSuccess || isError) {
@@ -60,6 +79,12 @@ export const BuilderDetails = ({
           method: "POST",
           body: JSON.stringify({ hash, wallet }),
         });
+
+        (async () => {
+          const newBalance = await balanceFor(wallet);
+
+          setCurrentTotalSupply(newBalance);
+        })();
       } else {
         toast.error("Transaction failed");
       }
@@ -72,6 +97,21 @@ export const BuilderDetails = ({
       toast.info("Transaction submitted, please wait..");
     }
   }, [hash]);
+
+  useEffect(() => {
+    if (address) {
+      (async () => {
+        const balance = await balanceOfCollectorForBuilder(address, wallet);
+        setCollectionStatus(
+          balance > 0
+            ? CheckingCollectionStatus.COLLECTED
+            : CheckingCollectionStatus.NOT_COLLECTED
+        );
+      })();
+    } else {
+      setCollectionStatus(CheckingCollectionStatus.CANNOT_CHECK);
+    }
+  }, [address, wallet]);
 
   const handleCollect = async () => {
     if (!address) {
@@ -175,22 +215,42 @@ export const BuilderDetails = ({
           zIndex: 10,
         }}
       >
-        <Button
-          size="lg"
-          sx={{ width: "100%", backgroundColor: "black" }}
-          startDecorator={<LocalActivity />}
-          onClick={() => handleCollect()}
-          loading={isCollecting}
-        >
-          {isCollecting ? "" : "Collect"}
-        </Button>
+        {collectionStatus === CheckingCollectionStatus.NOT_COLLECTED && (
+          <Button
+            size="lg"
+            sx={{ width: "100%", backgroundColor: "black" }}
+            startDecorator={<LocalActivity />}
+            onClick={() => handleCollect()}
+            loading={isCollecting}
+          >
+            {isCollecting ? "" : "Collect"}
+          </Button>
+        )}
+        {collectionStatus === CheckingCollectionStatus.COLLECTED && (
+          <Typography
+            level="body-sm"
+            textColor="common.black"
+            textAlign={"center"}
+          >
+            You have already collected this Builder
+          </Typography>
+        )}
+        {collectionStatus === CheckingCollectionStatus.CHECKING && (
+          <Typography
+            level="body-sm"
+            textColor="common.black"
+            textAlign={"center"}
+          >
+            Checking your collection status
+          </Typography>
+        )}
         <Typography
           level="body-sm"
           textColor="common.black"
           textAlign={"center"}
         >
-          {(totalSupply ?? 0) > 0
-            ? `Collected x${totalSupply}`
+          {(currentTotalSupply ?? 0) > 0
+            ? `Collected x${currentTotalSupply}`
             : "Be the first to collect!"}
         </Typography>
       </Box>
