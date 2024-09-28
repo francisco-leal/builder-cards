@@ -91,7 +91,7 @@ describe(CONTRACT_NAME, function () {
         function () {
           const value = ethers.parseEther("0.0011");
 
-          it("does not revert", async function () {
+          it("reverts", async function () {
             const { builderCard, accountA: builderAccountToCollect } =
               await loadFixture(deployBuilderCardFixture);
 
